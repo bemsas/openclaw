@@ -1,9 +1,12 @@
+import type { OpenClawConfig } from "../config/types.openclaw.js";
+import { resolveSwarmConfig } from "./swarm-config.js";
 /**
  * Core tool catalog and profile defaults.
  * Drives built-in profile allowlists, group expansion, and UI section metadata
  * for OpenClaw-owned tools.
  */
 import {
+  AGENTS_WAIT_TOOL_DISPLAY_SUMMARY,
   CRON_TOOL_DISPLAY_SUMMARY,
   EXEC_TOOL_DISPLAY_SUMMARY,
   PROCESS_TOOL_DISPLAY_SUMMARY,
@@ -219,6 +222,14 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     id: "sessions_spawn",
     label: "sessions_spawn",
     description: SESSIONS_SPAWN_TOOL_DISPLAY_SUMMARY,
+    sectionId: "sessions",
+    profiles: ["coding"],
+    includeInOpenClawGroup: true,
+  },
+  {
+    id: "agents_wait",
+    label: "agents_wait",
+    description: AGENTS_WAIT_TOOL_DISPLAY_SUMMARY,
     sectionId: "sessions",
     profiles: ["coding"],
     includeInOpenClawGroup: true,
@@ -513,11 +524,17 @@ export function resolveCoreToolProfilePolicy(profile?: string): ToolProfilePolic
 }
 
 /** Lists core tools grouped into UI sections. */
-export function listCoreToolSections(): CoreToolSection[] {
+export function listCoreToolSections(params?: {
+  config?: OpenClawConfig;
+  agentId?: string;
+}): CoreToolSection[] {
+  const swarmEnabled = resolveSwarmConfig(params?.config, params?.agentId).enabled;
   return CORE_TOOL_SECTION_ORDER.map((section) => ({
     id: section.id,
     label: section.label,
-    tools: CORE_TOOL_DEFINITIONS.filter((tool) => tool.sectionId === section.id).map((tool) => ({
+    tools: CORE_TOOL_DEFINITIONS.filter(
+      (tool) => tool.sectionId === section.id && (tool.id !== "agents_wait" || swarmEnabled),
+    ).map((tool) => ({
       id: tool.id,
       label: tool.label,
       description: tool.description,
