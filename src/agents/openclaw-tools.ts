@@ -41,6 +41,7 @@ import {
   shouldIncludeAskUserToolForOpenClawTools,
   shouldIncludeUpdatePlanToolForOpenClawTools,
 } from "./openclaw-tools.registration.js";
+import type { PreparedModelRuntimeSnapshot } from "./prepared-model-runtime.js";
 import type { SandboxFsBridge } from "./sandbox/fs-bridge.js";
 import type { SpawnedToolContext } from "./spawned-context.js";
 import type { ToolFsPolicy } from "./tool-fs-policy.js";
@@ -129,6 +130,7 @@ export function createOpenClawTools(
     /** Opaque host-issued capability for current-turn channel message actions. */
     messageActionTurnCapability?: string;
     agentDir?: string;
+    preparedModelRuntime?: PreparedModelRuntimeSnapshot;
     sandboxRoot?: string;
     sandboxContainerWorkdir?: string;
     sandboxFsBridge?: SandboxFsBridge;
@@ -301,7 +303,9 @@ export function createOpenClawTools(
   })
     ? createImageTool({
         config: availabilityConfig ?? options?.config,
+        agentId: sessionAgentId,
         agentDir: imageToolAgentDir!,
+        preparedModelRuntime: options?.preparedModelRuntime,
         authProfileStore: options?.authProfileStore,
         workspaceDir,
         sandbox,
@@ -360,7 +364,9 @@ export function createOpenClawTools(
     optionalMediaTools.pdf && options?.agentDir?.trim()
       ? createPdfTool({
           config: options?.config,
+          agentId: sessionAgentId,
           agentDir: options.agentDir,
+          preparedModelRuntime: options?.preparedModelRuntime,
           authProfileStore: options?.authProfileStore,
           workspaceDir,
           sandbox,
