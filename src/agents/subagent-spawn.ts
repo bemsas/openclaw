@@ -1948,6 +1948,59 @@ export async function spawnSubagentDirect(
         timeoutMs: resolveSubagentAgentGatewayTimeoutMs(runTimeoutSeconds),
       });
     };
+    // "spawned"/"started" hooks mean an accepted Gateway run: the direct path
+    // emits them after launchChildRun, the collector path from the scheduler's
+    // start callback. Skipping either side unbalances plugin lifecycle audits.
+    const emitSpawnLifecycleHooks = async (hookRunId: string) => {
+      if (hookRunner?.hasHooks("subagent_progress")) {
+        try {
+          await hookRunner.runSubagentProgress(
+            {
+              phase: "started",
+              runId: hookRunId,
+              childSessionKey,
+              requester: progressOrigin,
+            },
+            {
+              runId: hookRunId,
+              childSessionKey,
+              requesterSessionKey: requesterInternalKey,
+            },
+          );
+        } catch {
+          // Progress presentation is best-effort and must not reject an accepted spawn.
+        }
+      }
+      if (hookRunner?.hasHooks("subagent_spawned")) {
+        try {
+          await hookRunner.runSubagentSpawned(
+            {
+              runId: hookRunId,
+              childSessionKey,
+              agentId: targetAgentId,
+              label: label || undefined,
+              requester: {
+                channel: requesterOrigin?.channel,
+                accountId: requesterOrigin?.accountId,
+                to: requesterOrigin?.to,
+                threadId: requesterOrigin?.threadId,
+              },
+              threadRequested: requestThreadBinding,
+              mode: spawnMode,
+              ...resolvedModelMetadata,
+            },
+            {
+              runId: hookRunId,
+              childSessionKey,
+              requesterSessionKey: requesterInternalKey,
+            },
+          );
+        } catch {
+          // Spawn should still return accepted if spawn lifecycle hooks fail.
+        }
+      }
+    };
+
     if (params.collect && swarmGroupId && swarmSchedulerGroupKey) {
       // Recheck immediately before the synchronous registry reservation. Spawn
       // preparation above yields, so this closes concurrent cap-check races.
@@ -2003,6 +2056,7 @@ export async function spawnSubagentDirect(
             launchTerminationConfirmed = true;
             throw error;
           }
+          await emitSpawnLifecycleHooks(gatewayRunId);
         },
         onStartFailure: async (error) => {
           const launchError = summarizeError(error);
@@ -2178,54 +2232,7 @@ export async function spawnSubagentDirect(
       };
     }
 
-    if (hookRunner?.hasHooks("subagent_progress")) {
-      try {
-        await hookRunner.runSubagentProgress(
-          {
-            phase: "started",
-            runId: childRunId,
-            childSessionKey,
-            requester: progressOrigin,
-          },
-          {
-            runId: childRunId,
-            childSessionKey,
-            requesterSessionKey: requesterInternalKey,
-          },
-        );
-      } catch {
-        // Progress presentation is best-effort and must not reject an accepted spawn.
-      }
-    }
-
-    if (hookRunner?.hasHooks("subagent_spawned")) {
-      try {
-        await hookRunner.runSubagentSpawned(
-          {
-            runId: childRunId,
-            childSessionKey,
-            agentId: targetAgentId,
-            label: label || undefined,
-            requester: {
-              channel: requesterOrigin?.channel,
-              accountId: requesterOrigin?.accountId,
-              to: requesterOrigin?.to,
-              threadId: requesterOrigin?.threadId,
-            },
-            threadRequested: requestThreadBinding,
-            mode: spawnMode,
-            ...resolvedModelMetadata,
-          },
-          {
-            runId: childRunId,
-            childSessionKey,
-            requesterSessionKey: requesterInternalKey,
-          },
-        );
-      } catch {
-        // Spawn should still return accepted if spawn lifecycle hooks fail.
-      }
-    }
+    await emitSpawnLifecycleHooks(childRunId);
 
     // Emit lifecycle event so the gateway can broadcast sessions.changed to SSE subscribers.
     emitSessionLifecycleEvent({
