@@ -123,13 +123,14 @@ private final class SessionActionTransport: @unchecked Sendable, OpenClawChatTra
                     ok: true,
                     groups: names.enumerated().map {
                         OpenClawChatSessionGroup(name: $0.element, position: $0.offset)
-                    })
+                    },
+                    updatedSessions: nil)
             },
             renameGroup: { _, _ in
-                OpenClawChatSessionGroupsMutationResponse(ok: true, groups: [])
+                OpenClawChatSessionGroupsMutationResponse(ok: true, groups: [], updatedSessions: nil)
             },
             deleteGroup: { _ in
-                OpenClawChatSessionGroupsMutationResponse(ok: true, groups: [])
+                OpenClawChatSessionGroupsMutationResponse(ok: true, groups: [], updatedSessions: nil)
             })
     }
 
