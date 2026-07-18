@@ -12713,7 +12713,7 @@ public struct QuestionOption: Codable, Sendable {
 }
 
 public struct Question: Codable, Sendable {
-    public let id: String
+    public let questionid: String
     public let header: String
     public let question: String
     public let options: [QuestionOption]
@@ -12722,7 +12722,7 @@ public struct Question: Codable, Sendable {
     public let issecret: Bool?
 
     public init(
-        id: String,
+        questionid: String,
         header: String,
         question: String,
         options: [QuestionOption],
@@ -12730,7 +12730,7 @@ public struct Question: Codable, Sendable {
         isother: Bool? = nil,
         issecret: Bool? = nil)
     {
-        self.id = id
+        self.questionid = questionid
         self.header = header
         self.question = question
         self.options = options
@@ -12740,7 +12740,7 @@ public struct Question: Codable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id
+        case questionid = "questionId"
         case header
         case question
         case options
@@ -12751,7 +12751,7 @@ public struct Question: Codable, Sendable {
 }
 
 public struct QuestionRequestQuestion: Codable, Sendable {
-    public let id: String
+    public let questionid: String
     public let header: String
     public let question: String
     public let options: [QuestionOption]
@@ -12760,7 +12760,7 @@ public struct QuestionRequestQuestion: Codable, Sendable {
     public let issecret: Bool?
 
     public init(
-        id: String,
+        questionid: String,
         header: String,
         question: String,
         options: [QuestionOption],
@@ -12768,7 +12768,7 @@ public struct QuestionRequestQuestion: Codable, Sendable {
         isother: Bool? = nil,
         issecret: Bool? = nil)
     {
-        self.id = id
+        self.questionid = questionid
         self.header = header
         self.question = question
         self.options = options
@@ -12778,7 +12778,7 @@ public struct QuestionRequestQuestion: Codable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id
+        case questionid = "questionId"
         case header
         case question
         case options
