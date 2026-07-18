@@ -91,24 +91,33 @@ function migrateLidAllowlistEntries(params: {
   return changed ? entries : null;
 }
 
-function resolveRootAllowlistMappingScopes(params: {
+function resolveAllowlistMappingScopes(params: {
   cfg: OpenClawConfig;
   accounts: Record<string, unknown> | null;
   key: WhatsAppAllowlistKey;
+  accountId?: string;
 }): string[][] {
+  const ownerAccountId = params.accountId?.trim();
+  const ownerId = ownerAccountId?.toLowerCase();
+  if (ownerAccountId && ownerId !== DEFAULT_ACCOUNT_ID) {
+    return [[resolveWhatsAppAuthDir({ cfg: params.cfg, accountId: ownerAccountId }).authDir]];
+  }
   const defaultEntry = asObjectRecord(
     resolveAccountEntry(params.accounts ?? undefined, DEFAULT_ACCOUNT_ID),
   );
   const defaultOverridesRoot = Array.isArray(defaultEntry?.[params.key]);
   return listWhatsAppAccountIds(params.cfg).flatMap((accountId) => {
+    const normalizedAccountId = accountId.trim().toLowerCase();
     const accountEntry = asObjectRecord(
       resolveAccountEntry(params.accounts ?? undefined, accountId),
     );
-    const accountOverridesRoot = Array.isArray(accountEntry?.[params.key]);
-    if (
-      accountOverridesRoot ||
-      (accountId.trim().toLowerCase() !== DEFAULT_ACCOUNT_ID && defaultOverridesRoot)
-    ) {
+    const accountOverridesInherited = Array.isArray(accountEntry?.[params.key]);
+    const inheritsOwner =
+      ownerId === DEFAULT_ACCOUNT_ID
+        ? normalizedAccountId === DEFAULT_ACCOUNT_ID || !accountOverridesInherited
+        : !accountOverridesInherited &&
+          (normalizedAccountId === DEFAULT_ACCOUNT_ID || !defaultOverridesRoot);
+    if (!inheritsOwner) {
       return [];
     }
     return [[resolveWhatsAppAuthDir({ cfg: params.cfg, accountId }).authDir]];
@@ -159,7 +168,7 @@ export function migrateWhatsAppLidAllowlistsConfig(
   const migratedRoot = migrateLidAllowlistFields({
     entry,
     configPath: "channels.whatsapp",
-    resolveMappingScopes: (key) => resolveRootAllowlistMappingScopes({ cfg, accounts, key }),
+    resolveMappingScopes: (key) => resolveAllowlistMappingScopes({ cfg, accounts, key }),
     changes,
     warnings,
   });
@@ -178,9 +187,10 @@ export function migrateWhatsAppLidAllowlistsConfig(
           const migrated = migrateLidAllowlistFields({
             entry: account,
             configPath: `channels.whatsapp.accounts.${accountId}`,
-            // LIDs are account-scoped. A mapping from another account must never
-            // authorize a sender in this account's allowlist.
-            resolveMappingScopes: () => [[resolveWhatsAppAuthDir({ cfg, accountId }).authDir]],
+            // Default-account policy is inherited by named accounts. Require a
+            // unanimous mapping across every account that consumes each field.
+            resolveMappingScopes: (key) =>
+              resolveAllowlistMappingScopes({ cfg, accounts, key, accountId }),
             changes,
             warnings,
           });

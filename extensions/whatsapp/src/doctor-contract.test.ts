@@ -182,6 +182,69 @@ describe("whatsapp allowlist LID upgrade", () => {
     });
   });
 
+  it.each(["allowFrom", "groupAllowFrom"] as const)(
+    "requires every account inheriting accounts.default %s to verify the mapping",
+    async (key) => {
+      await withTempDir("openclaw-whatsapp-doctor-default-scope-", async (rootDir) => {
+        const defaultAuthDir = path.join(rootDir, "default");
+        const workAuthDir = path.join(rootDir, "work");
+        await fs.mkdir(defaultAuthDir);
+        await fs.mkdir(workAuthDir);
+        await writeLidMapping(defaultAuthDir, "456", "15550000456");
+        const cfg = whatsappConfig({
+          accounts: {
+            default: { authDir: defaultAuthDir, [key]: ["456@lid"] },
+            work: { authDir: workAuthDir },
+          },
+        });
+
+        const unresolved = normalizeCompatibilityConfig({ cfg });
+        const unresolvedAccounts = unresolved.config.channels?.whatsapp?.accounts as Record<
+          string,
+          Record<string, unknown>
+        >;
+        expect(unresolvedAccounts.default?.[key]).toEqual(["456@lid"]);
+        expect(unresolved.warnings).toEqual([
+          expect.stringContaining("no verified LID→PN mapping was found"),
+        ]);
+
+        await writeLidMapping(workAuthDir, "456", "15550000456");
+        const migrated = normalizeCompatibilityConfig({ cfg });
+        const migratedAccounts = migrated.config.channels?.whatsapp?.accounts as Record<
+          string,
+          Record<string, unknown>
+        >;
+        expect(migratedAccounts.default?.[key]).toEqual(["15550000456"]);
+        expect(migrated.warnings).toEqual([]);
+      });
+    },
+  );
+
+  it("excludes a named account's own allowlist from default-account mapping scopes", async () => {
+    await withTempDir("openclaw-whatsapp-doctor-default-override-", async (rootDir) => {
+      const defaultAuthDir = path.join(rootDir, "default");
+      const workAuthDir = path.join(rootDir, "work");
+      await fs.mkdir(defaultAuthDir);
+      await fs.mkdir(workAuthDir);
+      await writeLidMapping(defaultAuthDir, "654", "15550000654");
+      const result = normalizeCompatibilityConfig({
+        cfg: whatsappConfig({
+          accounts: {
+            default: { authDir: defaultAuthDir, allowFrom: ["654@lid"] },
+            work: { authDir: workAuthDir, allowFrom: ["+15550000999"] },
+          },
+        }),
+      });
+
+      const accounts = result.config.channels?.whatsapp?.accounts as Record<
+        string,
+        { allowFrom?: string[] }
+      >;
+      expect(accounts.default?.allowFrom).toEqual(["15550000654"]);
+      expect(result.warnings).toEqual([]);
+    });
+  });
+
   it("does not migrate a named account from the legacy shared mapping directory", async () => {
     await withStateDirEnv("openclaw-whatsapp-doctor-shared-", async ({ stateDir }) => {
       const credentialsDir = path.join(stateDir, "credentials");
