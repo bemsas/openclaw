@@ -280,7 +280,8 @@ export function readPluginSdkSurfaceBudgets(env = process.env) {
       // +1: AgentThinkingLevel shared by default-turn and compaction config.
       // +9: shared ingress monitor factory and lifecycle/result contracts across
       // channel-outbound and its two deprecated compatibility barrels.
-      8177,
+      // +1: canonical ingress-decision to turn-admission mapper.
+      8178,
       env,
     ),
     publicFunctionExports: readPluginSdkSurfaceBudgetEnv(
@@ -325,7 +326,8 @@ export function readPluginSdkSurfaceBudgets(env = process.env) {
       // +1: bounded raw transcript cursor reader.
       // +1: bounded visible transcript cursor reader.
       // +3: shared ingress monitor factory across channel-outbound and compat mirrors.
-      4546,
+      // +1: canonical ingress-decision to turn-admission mapper.
+      4547,
       env,
     ),
     publicDeprecatedExports: readPluginSdkSurfaceBudgetEnv(
