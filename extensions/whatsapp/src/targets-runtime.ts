@@ -2,6 +2,7 @@
 import { normalizeE164 } from "openclaw/plugin-sdk/account-resolution";
 import { logVerbose, shouldLogVerbose } from "openclaw/plugin-sdk/runtime-env";
 import { escapeRegExp } from "openclaw/plugin-sdk/text-utility-runtime";
+import { normalizeWhatsAppAllowFromEntry } from "./allowlist-format.js";
 import {
   readWhatsAppLidToPnMapping,
   readWhatsAppPnToLidMapping,
@@ -39,16 +40,13 @@ export function isSelfChatMode(
   if (!Array.isArray(allowFrom) || allowFrom.length === 0) {
     return false;
   }
-  const normalizedSelf = normalizeE164(selfE164);
+  const normalizedSelf = normalizeWhatsAppAllowFromEntry(selfE164);
+  if (!normalizedSelf || normalizedSelf === "*") {
+    return false;
+  }
   return allowFrom.some((n) => {
-    if (n === "*") {
-      return false;
-    }
-    try {
-      return normalizeE164(String(n)) === normalizedSelf;
-    } catch {
-      return false;
-    }
+    const normalized = normalizeWhatsAppAllowFromEntry(String(n));
+    return normalized !== "*" && normalized === normalizedSelf;
   });
 }
 

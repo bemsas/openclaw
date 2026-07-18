@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   assertWebChannel,
+  isSelfChatMode,
   jidToE164,
   markdownToWhatsApp,
   resolveEquivalentWhatsAppDirectChatJids,
@@ -88,6 +89,15 @@ describe("assertWebChannel", () => {
 
   it("throws for invalid channel", () => {
     expect(() => assertWebChannel("bad" as string)).toThrow("Web channel must be 'web'");
+  });
+});
+
+describe("isSelfChatMode", () => {
+  it("accepts PN forms but not same-digit LID forms", () => {
+    expect(isSelfChatMode("+15551230000", ["15551230000:3@c.us"])).toBe(true);
+    expect(isSelfChatMode("+15551230000", ["15551230000:4@hosted"])).toBe(true);
+    expect(isSelfChatMode("+15551230000", ["15551230000@lid"])).toBe(false);
+    expect(isSelfChatMode("+15551230000", ["15551230000@hosted.lid"])).toBe(false);
   });
 });
 

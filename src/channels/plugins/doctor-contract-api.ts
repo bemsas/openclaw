@@ -13,6 +13,7 @@ import { loadBundledPluginPublicArtifactModuleSync } from "../../plugins/public-
 type BundledChannelDoctorCompatibilityMutation = {
   config: OpenClawConfig;
   changes: string[];
+  warnings?: string[];
 };
 
 /**

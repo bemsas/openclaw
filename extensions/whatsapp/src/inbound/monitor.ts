@@ -56,7 +56,7 @@ import {
   requireAdmittedWhatsAppInboundMessage,
   requireWhatsAppInboundAdmission,
 } from "./admission.js";
-import { isRecentOutboundMessage, rememberRecentOutboundMessage } from "./dedupe.js";
+import { isRecentOutboundMessage } from "./dedupe.js";
 import {
   createWhatsAppDurableInboundMessageId,
   createWhatsAppDurableInboundQueue,
