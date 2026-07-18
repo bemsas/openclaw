@@ -255,6 +255,7 @@ export async function installClawPackages(
           status: "pending",
           relationship: "managed",
           origin: "claw-introduced",
+          independentOwner: false,
         });
         installedPackages.push(packageRef);
         const installed = await installSkill({
@@ -324,8 +325,7 @@ export async function installClawPackages(
         const inheritsClawOrigin =
           existingRefs.length > 0 &&
           existingRefs.every(
-            (candidate) =>
-              candidate.origin === "claw-introduced" && !candidate.independentOwner,
+            (candidate) => candidate.origin === "claw-introduced" && !candidate.independentOwner,
           ) &&
           !ownerInstallIsNewerThanRefs(preflight.installedAt, existingRefs);
         installedPackages.push(
@@ -345,6 +345,7 @@ export async function installClawPackages(
         status: "pending",
         relationship: "referenced",
         origin: "claw-introduced",
+        independentOwner: false,
       });
       installedPackages.push(packageRef);
 
