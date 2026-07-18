@@ -1216,8 +1216,12 @@ class MainViewModel private constructor(
     }
   }
 
-  fun acceptGatewayTrustPrompt() {
-    runtimeRef.value?.acceptGatewayTrustPrompt()
+  fun acceptGatewayTrustPrompt(manualFingerprint: String? = null) {
+    runtimeRef.value?.acceptGatewayTrustPrompt(manualFingerprint)
+  }
+
+  fun useSystemGatewayTrustPrompt() {
+    runtimeRef.value?.useSystemGatewayTrustPrompt()
   }
 
   fun declineGatewayTrustPrompt() {
