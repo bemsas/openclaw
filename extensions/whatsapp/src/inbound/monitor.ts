@@ -26,7 +26,13 @@ import { createSubsystemLogger } from "openclaw/plugin-sdk/runtime-env";
 import { maybeResolveWhatsAppApprovalReaction } from "../approval-reactions.js";
 import { readWebSelfIdentityForDecision, WhatsAppAuthUnstableError } from "../auth-store.js";
 import { getWhatsAppConnectionController } from "../connection-controller-runtime-context.js";
-import { getPrimaryIdentityId, identitiesOverlap, resolveComparableIdentity } from "../identity.js";
+import {
+  getPrimaryIdentityId,
+  identitiesOverlap,
+  prepareWhatsAppInboundActor,
+  resolveComparableIdentity,
+  type PreparedWhatsAppInboundActor,
+} from "../identity.js";
 import { addWhatsAppImagePreviewFields } from "../image-preview.js";
 import { maybeResolveWhatsAppQuestionReaction } from "../question-reactions.js";
 import { cacheInboundMessageMeta, canonicalizeWhatsAppDirectJids } from "../quoted-message.js";
@@ -1006,12 +1012,9 @@ export async function attachWebInboxToSocket(
     return true;
   };
 
-  const resolveDirectInboundJid = async (msg: WAMessage, remoteJid: string) => {
-    const pnJid = [remoteJid, msg.key.remoteJidAlt].find(
-      (jid) => classifyWhatsAppJid(jid).kind === "pn",
-    );
-    return resolveInboundJid(pnJid ?? remoteJid);
-  };
+  const resolveInboundActorE164 = async (
+    actor: PreparedWhatsAppInboundActor,
+  ): Promise<string | null> => actor.e164 ?? resolveInboundJid(actor.transportJid);
 
   const normalizeInboundMessage = async (
     msg: WAMessage,
@@ -1046,16 +1049,18 @@ export async function attachWebInboxToSocket(
       return null;
     }
 
-    const participantJid = msg.key?.participant ?? undefined;
-    const from = group ? remoteJid : await resolveDirectInboundJid(msg, remoteJid);
+    const actor = prepareWhatsAppInboundActor({
+      primaryJid: group ? msg.key?.participant : remoteJid,
+      alternateJid: group ? msg.key?.participantAlt : msg.key?.remoteJidAlt,
+    });
+    const participantJid = group
+      ? (actor?.transportJid ?? msg.key?.participant ?? undefined)
+      : undefined;
+    const from = group ? remoteJid : actor ? await resolveInboundActorE164(actor) : null;
     if (!from) {
       return null;
     }
-    const senderE164 = group
-      ? participantJid
-        ? await resolveInboundJid(participantJid)
-        : null
-      : from;
+    const senderE164 = group ? (actor ? await resolveInboundActorE164(actor) : null) : from;
 
     let groupSubject: string | undefined;
     let groupParticipants: string[] | undefined;

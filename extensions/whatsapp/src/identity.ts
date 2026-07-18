@@ -16,6 +16,11 @@ export type WhatsAppSelfIdentity = {
   e164?: string | null;
 };
 
+export type PreparedWhatsAppInboundActor = {
+  transportJid: string;
+  e164: string | null;
+};
+
 export type WhatsAppReplyContext = {
   id?: string;
   body: string;
@@ -80,6 +85,28 @@ export function resolveComparableIdentity(
     jid,
     lid,
     e164,
+  };
+}
+
+export function prepareWhatsAppInboundActor(params: {
+  primaryJid: string | null | undefined;
+  alternateJid?: string | null;
+}): PreparedWhatsAppInboundActor | null {
+  const transportJid = params.primaryJid?.trim();
+  if (!transportJid) {
+    return null;
+  }
+  const primary = classifyWhatsAppDirectJid(transportJid);
+  if (!primary) {
+    return null;
+  }
+  const alternate = classifyWhatsAppDirectJid(params.alternateJid);
+  // Baileys has already observed this PN/LID pair on the inbound envelope.
+  // Keep the primary transport identity while carrying its PN fact forward.
+  const phone = primary.kind === "pn" ? primary : alternate?.kind === "pn" ? alternate : null;
+  return {
+    transportJid,
+    e164: phone ? `+${phone.user}` : null,
   };
 }
 

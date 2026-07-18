@@ -23,6 +23,7 @@ import {
   getAuthDir,
   getSock,
   installWebMonitorInboxUnitTestHooks,
+  mockLoadConfig,
   resetWebInboundDedupeForTests,
   settleInboundWork,
   startInboxMonitor,
@@ -2124,6 +2125,47 @@ describe("web monitor inbox", () => {
     expect(inbound.admission?.conversation.id).toBe("123@g.us");
     expect(inbound.platform.senderE164).toBe("+444");
     expect(inbound.admission?.conversation.kind).toBe("group");
+
+    await listener.close();
+  });
+
+  it("uses an observed group participant PN without mapping discovery", async () => {
+    mockLoadConfig.mockReturnValue({
+      channels: {
+        whatsapp: {
+          groupAllowFrom: ["+15551234567"],
+          groupPolicy: "allowlist",
+        },
+      },
+      messages: DEFAULT_WEB_INBOX_CONFIG.messages,
+    });
+    const onMessage = vi.fn(async () => {});
+    const { listener, sock } = await startInboxMonitor(onMessage as InboxOnMessage);
+    const getLIDForPN = vi.spyOn(sock.signalRepository.lidMapping, "getLIDForPN");
+    const getPNForLID = vi.spyOn(sock.signalRepository.lidMapping, "getPNForLID");
+
+    sock.ev.emit(
+      "messages.upsert",
+      buildNotifyMessageUpsert({
+        id: nextMessageId("group-observed-pn"),
+        remoteJid: "123@g.us",
+        participant: "812345678901234@lid",
+        participantAlt: "15551234567:2@s.whatsapp.net",
+        text: "authorized group sender",
+        timestamp: 1_700_000_000,
+      }),
+    );
+    await waitForMessageCalls(onMessage, 1);
+
+    expect(getLIDForPN).not.toHaveBeenCalled();
+    expect(getPNForLID).not.toHaveBeenCalled();
+    const inbound = inboundMessage(onMessage);
+    expect(inbound.platform.senderE164).toBe("+15551234567");
+    expect(inbound.platform.senderJid).toBe("812345678901234@lid");
+    expect(inbound.platform.sender).toMatchObject({
+      lid: "812345678901234@lid",
+      e164: "+15551234567",
+    });
 
     await listener.close();
   });
