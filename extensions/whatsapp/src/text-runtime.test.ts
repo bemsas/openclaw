@@ -164,6 +164,7 @@ describe("jidToE164", () => {
   it("falls back through lidMappingDirs in order", async () => {
     await withTempDir("openclaw-lid-a-", async (first) => {
       await withTempDir("openclaw-lid-b-", (second) => {
+        fs.writeFileSync(path.join(first, "lid-mapping-321_reverse.json"), JSON.stringify("bad"));
         const mappingPath = path.join(second, "lid-mapping-321_reverse.json");
         fs.writeFileSync(mappingPath, JSON.stringify("123321"));
         expect(jidToE164("321@lid", { lidMappingDirs: [first, second] })).toBe("+123321");
@@ -181,8 +182,9 @@ describe("toWhatsappJidWithLid (issue #67378)", () => {
     });
   });
 
-  it("falls back to PN s.whatsapp.net JID when no forward mapping exists", async () => {
+  it("falls back to PN when the forward mapping is missing or malformed", async () => {
     await withTempDir("openclaw-fwd-", (authDir) => {
+      fs.writeFileSync(path.join(authDir, "lid-mapping-33123456789.json"), JSON.stringify("bad"));
       expect(toWhatsappJidWithLid("+33123456789", { authDir })).toBe("33123456789@s.whatsapp.net");
     });
   });

@@ -1,7 +1,8 @@
 // Whatsapp plugin module owns dependency-free JID syntax checks.
 
-const GROUP_LOCAL_PART_RE = /^[0-9]+(?:-[0-9]+)*$/;
 const DIRECT_LOCAL_PART_RE = /^(\d+)(?::\d+)?$/;
+const GROUP_LOCAL_PART_RE = /^[0-9]+(?:-[0-9]+)*$/;
+const NUMERIC_LOCAL_PART_RE = /^\d+$/;
 
 type WhatsAppDirectJidSyntaxServer = "s.whatsapp.net" | "c.us" | "hosted" | "lid" | "hosted.lid";
 
@@ -13,31 +14,50 @@ const DIRECT_JID_SERVERS = new Set<WhatsAppDirectJidSyntaxServer>([
   "hosted.lid",
 ]);
 
+type WhatsAppJidSyntax = {
+  kind: "pn" | "lid" | "group" | "newsletter";
+  user: string;
+  server: WhatsAppDirectJidSyntaxServer | "g.us" | "newsletter";
+  input: string;
+};
+
+export function parseWhatsAppJidSyntax(value: string | null | undefined): WhatsAppJidSyntax | null {
+  const trimmed = value?.trim();
+  const separatorIndex = trimmed?.indexOf("@") ?? -1;
+  if (!trimmed || separatorIndex <= 0 || separatorIndex !== trimmed.lastIndexOf("@")) {
+    return null;
+  }
+
+  const localPart = trimmed.slice(0, separatorIndex);
+  const server = trimmed.slice(separatorIndex + 1).toLowerCase();
+  if (DIRECT_JID_SERVERS.has(server as WhatsAppDirectJidSyntaxServer)) {
+    const user = DIRECT_LOCAL_PART_RE.exec(localPart)?.[1];
+    if (!user) {
+      return null;
+    }
+    return {
+      kind: server === "lid" || server === "hosted.lid" ? "lid" : "pn",
+      user,
+      server: server as WhatsAppDirectJidSyntaxServer,
+      input: `${localPart}@${server}`,
+    };
+  }
+  if (server === "g.us" && GROUP_LOCAL_PART_RE.test(localPart)) {
+    return { kind: "group", user: localPart, server, input: `${localPart}@${server}` };
+  }
+  if (server === "newsletter" && NUMERIC_LOCAL_PART_RE.test(localPart)) {
+    return { kind: "newsletter", user: localPart, server, input: `${localPart}@${server}` };
+  }
+  return null;
+}
+
 export function parseWhatsAppDirectJidSyntax(
   value: string | null | undefined,
 ): { user: string; server: WhatsAppDirectJidSyntaxServer } | null {
-  const trimmed = value?.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const separatorIndex = trimmed.indexOf("@");
-  if (separatorIndex <= 0 || separatorIndex !== trimmed.lastIndexOf("@")) {
-    return null;
-  }
-  const localPart = trimmed.slice(0, separatorIndex);
-  const server = trimmed.slice(separatorIndex + 1).toLowerCase();
-  if (!DIRECT_JID_SERVERS.has(server as WhatsAppDirectJidSyntaxServer)) {
-    return null;
-  }
-  const match = DIRECT_LOCAL_PART_RE.exec(localPart);
-  const user = match?.[1];
-  if (!user) {
-    return null;
-  }
-  return {
-    user,
-    server: server as WhatsAppDirectJidSyntaxServer,
-  };
+  const parsed = parseWhatsAppJidSyntax(value);
+  return parsed?.kind === "pn" || parsed?.kind === "lid"
+    ? { user: parsed.user, server: parsed.server as WhatsAppDirectJidSyntaxServer }
+    : null;
 }
 
 export function stripWhatsAppTargetPrefixes(value: string): string {
@@ -52,15 +72,6 @@ export function stripWhatsAppTargetPrefixes(value: string): string {
 }
 
 export function canonicalizeWhatsAppGroupJid(value: string | null | undefined): string | null {
-  const trimmed = value?.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const separatorIndex = trimmed.indexOf("@");
-  if (separatorIndex <= 0 || separatorIndex !== trimmed.lastIndexOf("@")) {
-    return null;
-  }
-  const localPart = trimmed.slice(0, separatorIndex);
-  const server = trimmed.slice(separatorIndex + 1).toLowerCase();
-  return server === "g.us" && GROUP_LOCAL_PART_RE.test(localPart) ? `${localPart}@g.us` : null;
+  const parsed = parseWhatsAppJidSyntax(value);
+  return parsed?.kind === "group" ? parsed.input : null;
 }

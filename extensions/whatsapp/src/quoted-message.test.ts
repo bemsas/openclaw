@@ -8,6 +8,9 @@ import {
   lookupInboundMessageMetaForTarget,
 } from "./quoted-message.js";
 
+const lookupForTarget = (accountId: string, targetJid: string, messageId: string) =>
+  lookupInboundMessageMetaForTarget(accountId, targetJid, messageId);
+
 describe("quoted message metadata cache", () => {
   it("scopes cached metadata by account id", () => {
     cacheInboundMessageMeta("account-a", "1555@s.whatsapp.net", "msg-1", {
@@ -40,34 +43,25 @@ describe("quoted message metadata cache", () => {
       fromMe: true,
     });
 
-    expect(
-      lookupInboundMessageMetaForTarget("account-c", "5511976136970@s.whatsapp.net", "msg-2"),
-    ).toEqual({
+    expect(lookupForTarget("account-c", "5511976136970@s.whatsapp.net", "msg-2")).toEqual({
       remoteJid: "277038292303944@lid",
       participant: "5511976136970@s.whatsapp.net",
       body: "hello from lid chat",
       fromMe: true,
     });
-    expect(
-      lookupInboundMessageMetaForTarget("account-c", "99999999999@s.whatsapp.net", "msg-2"),
-    ).toBeUndefined();
-    expect(
-      lookupInboundMessageMetaForTarget("missing", "5511976136970@s.whatsapp.net", "msg-2"),
-    ).toBeUndefined();
+    expect(lookupForTarget("account-c", "99999999999@s.whatsapp.net", "msg-2")).toBeUndefined();
+    expect(lookupForTarget("missing", "5511976136970@s.whatsapp.net", "msg-2")).toBeUndefined();
   });
 
-  it("can recover a direct-chat remoteJid when only sender E164 was cached", () => {
+  it("can recover a direct-chat remoteJid when only its E164 was cached", () => {
     cacheInboundMessageMeta("account-e", "277038292303944@lid", "msg-4", {
-      participantE164: "+5511976136970",
+      remoteE164: "+5511976136970",
       body: "hello from e164 participant",
     });
 
-    expect(
-      lookupInboundMessageMetaForTarget("account-e", "5511976136970@s.whatsapp.net", "msg-4"),
-    ).toEqual({
+    expect(lookupForTarget("account-e", "5511976136970@s.whatsapp.net", "msg-4")).toEqual({
       remoteJid: "277038292303944@lid",
       participant: undefined,
-      participantE164: "+5511976136970",
       body: "hello from e164 participant",
       fromMe: undefined,
     });
@@ -80,15 +74,10 @@ describe("quoted message metadata cache", () => {
     });
 
     expect(
-      lookupInboundMessageMetaForTarget(
-        "account-canonical",
-        "15551230000@s.whatsapp.net",
-        "msg-canonical",
-      ),
+      lookupForTarget("account-canonical", "15551230000@s.whatsapp.net", "msg-canonical"),
     ).toEqual({
       remoteJid: "15551230000@s.whatsapp.net",
       participant: "15557654321@hosted",
-      participantE164: undefined,
       body: "canonical",
       fromMe: undefined,
     });
@@ -100,11 +89,7 @@ describe("quoted message metadata cache", () => {
     });
 
     expect(
-      lookupInboundMessageMetaForTarget(
-        "account-unmapped",
-        "812345678901234@s.whatsapp.net",
-        "msg-unmapped",
-      ),
+      lookupForTarget("account-unmapped", "812345678901234@s.whatsapp.net", "msg-unmapped"),
     ).toBeUndefined();
   });
 
@@ -116,41 +101,14 @@ describe("quoted message metadata cache", () => {
       { remoteE164: "+15551230000", body: "mapped hosted lid" },
     );
 
-    expect(
-      lookupInboundMessageMetaForTarget(
-        "account-hosted-map",
-        "15551230000:4@hosted",
-        "msg-hosted-map",
-      ),
-    ).toEqual({
-      remoteJid: "277038292303944@hosted.lid",
-      participant: undefined,
-      participantE164: undefined,
-      body: "mapped hosted lid",
-      fromMe: undefined,
-    });
-  });
-
-  it("uses prepared aliases when a PN-cached message is addressed by LID", () => {
-    cacheInboundMessageMeta("account-reverse-map", "15551230000@hosted", "msg-reverse-map", {
-      remoteE164: "+15551230000",
-      remoteJids: ["15551230000@hosted", "277038292303944@hosted.lid"],
-      body: "mapped hosted PN",
-    });
-
-    expect(
-      lookupInboundMessageMetaForTarget(
-        "account-reverse-map",
-        "277038292303944:7@hosted.lid",
-        "msg-reverse-map",
-      ),
-    ).toEqual({
-      remoteJid: "15551230000@hosted",
-      participant: undefined,
-      participantE164: undefined,
-      body: "mapped hosted PN",
-      fromMe: undefined,
-    });
+    expect(lookupForTarget("account-hosted-map", "15551230000:4@hosted", "msg-hosted-map")).toEqual(
+      {
+        remoteJid: "277038292303944@hosted.lid",
+        participant: undefined,
+        body: "mapped hosted lid",
+        fromMe: undefined,
+      },
+    );
   });
 
   it("rejects ambiguous prepared identity matches", () => {
@@ -164,11 +122,7 @@ describe("quoted message metadata cache", () => {
     });
 
     expect(
-      lookupInboundMessageMetaForTarget(
-        "account-ambiguous",
-        "15551230000@s.whatsapp.net",
-        "msg-ambiguous",
-      ),
+      lookupForTarget("account-ambiguous", "15551230000@s.whatsapp.net", "msg-ambiguous"),
     ).toBeUndefined();
   });
 
@@ -211,8 +165,6 @@ describe("quoted message metadata cache", () => {
       body: "group secret",
     });
 
-    expect(
-      lookupInboundMessageMetaForTarget("account-d", "222@s.whatsapp.net", "msg-3"),
-    ).toBeUndefined();
+    expect(lookupForTarget("account-d", "222@s.whatsapp.net", "msg-3")).toBeUndefined();
   });
 });

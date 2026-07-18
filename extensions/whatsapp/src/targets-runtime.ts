@@ -7,7 +7,13 @@ import {
   readWhatsAppPnToLidMapping,
   type WhatsAppLidMappingFileOptions,
 } from "./lid-mapping-files.js";
-import { classifyWhatsAppJid, encodeWhatsAppJid, type WhatsAppDirectJid } from "./whatsapp-jid.js";
+import { stripWhatsAppTargetPrefixes } from "./whatsapp-jid-syntax.js";
+import {
+  classifyWhatsAppDirectJid,
+  classifyWhatsAppJid,
+  encodeWhatsAppJid,
+  type WhatsAppDirectJid,
+} from "./whatsapp-jid.js";
 
 const WHATSAPP_FENCE_PLACEHOLDER = "\x00FENCE";
 const WHATSAPP_INLINE_CODE_PLACEHOLDER = "\x00CODE";
@@ -47,7 +53,7 @@ export function isSelfChatMode(
 }
 
 export function toWhatsappJid(number: string): string {
-  const withoutPrefix = number.replace(/^whatsapp:/i, "").trim();
+  const withoutPrefix = stripWhatsAppTargetPrefixes(number);
   if (withoutPrefix.includes("@")) {
     const classified = classifyWhatsAppJid(withoutPrefix);
     if (classified.kind === "unsupported") {
@@ -66,7 +72,7 @@ export function toWhatsappJid(number: string): string {
 // ghost-chat failure mode where messages route to a sender-only thread that
 // never reaches recipients whose contact is internally LID-based (#67378).
 export function toWhatsappJidWithLid(number: string, opts?: JidToE164Options): string {
-  const stripped = number.replace(/^whatsapp:/i, "").trim();
+  const stripped = stripWhatsAppTargetPrefixes(number);
   if (stripped.includes("@")) {
     return toWhatsappJid(stripped);
   }
@@ -108,17 +114,12 @@ async function tryLookupMappedJid(
   }
 }
 
-function classifyDirectJid(jid: string | null | undefined): WhatsAppDirectJid | null {
-  const classified = classifyWhatsAppJid(jid);
-  return classified.kind === "pn" || classified.kind === "lid" ? classified : null;
-}
-
 function addEquivalentDirectChatCandidate(
   target: string[],
   jid: string | null | undefined,
   expectedKind?: WhatsAppDirectJid["kind"],
 ): void {
-  const classified = classifyDirectJid(jid);
+  const classified = classifyWhatsAppDirectJid(jid);
   if (!classified || (expectedKind && classified.kind !== expectedKind)) {
     return;
   }
@@ -129,7 +130,7 @@ export async function resolveEquivalentWhatsAppDirectChatJids(
   jid: string | null | undefined,
   opts?: JidToE164Options & { lidLookup?: LidLookup; knownE164?: string | null },
 ): Promise<string[]> {
-  const directJid = classifyDirectJid(jid);
+  const directJid = classifyWhatsAppDirectJid(jid);
   if (!directJid) {
     return [];
   }
@@ -172,7 +173,7 @@ export async function resolveEquivalentWhatsAppDirectChatJids(
 }
 
 export function jidToE164(jid: string, opts?: JidToE164Options): string | null {
-  const directJid = classifyDirectJid(jid);
+  const directJid = classifyWhatsAppDirectJid(jid);
   if (!directJid) {
     return null;
   }
@@ -200,7 +201,7 @@ export async function resolveJidToE164(
   if (!jid) {
     return null;
   }
-  const directJid = classifyDirectJid(jid);
+  const directJid = classifyWhatsAppDirectJid(jid);
   if (!directJid) {
     return null;
   }

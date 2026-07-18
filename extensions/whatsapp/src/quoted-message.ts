@@ -1,6 +1,11 @@
 // Whatsapp plugin module implements quoted message behavior.
 import type { MiscMessageGenerationOptions } from "baileys";
-import { areSameWhatsAppJid, classifyWhatsAppJid } from "./whatsapp-jid.js";
+import { pruneMapToMaxSize } from "openclaw/plugin-sdk/collection-runtime";
+import {
+  areSameWhatsAppJid,
+  classifyWhatsAppDirectJid,
+  classifyWhatsAppJid,
+} from "./whatsapp-jid.js";
 
 // ── Inbound message metadata cache ──────────────────────────────────────
 // Retains canonical JIDs plus identity facts prepared while mapping context is
@@ -8,21 +13,17 @@ import { areSameWhatsAppJid, classifyWhatsAppJid } from "./whatsapp-jid.js";
 
 type QuotedMeta = {
   participant?: string;
-  participantE164?: string;
   body?: string;
   fromMe?: boolean;
 };
-type CacheEntry = QuotedMeta & {
+type ComparableIdentityFacts = {
   /** Prepared direct-chat identity; mapping discovery belongs at message ingestion/send time. */
   remoteE164?: string;
   remoteJids?: string[];
-  ts: number;
 };
 type QuotedMetaLookup = QuotedMeta & { remoteJid: string };
-type QuotedMetaCandidate = QuotedMetaLookup & {
-  remoteE164?: string;
-  remoteJids?: string[];
-};
+type QuotedMetaCandidate = QuotedMetaLookup & ComparableIdentityFacts;
+type CacheEntry = QuotedMetaCandidate & { ts: number };
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const MAX_ENTRIES = 500;
@@ -30,6 +31,10 @@ const cache = new Map<string, CacheEntry>();
 
 function makeCacheKey(accountId: string, remoteJid: string, messageId: string): string {
   return `${accountId}:${remoteJid}:${messageId}`;
+}
+
+function toQuotedMeta(meta: QuotedMeta): QuotedMeta {
+  return { participant: meta.participant, body: meta.body, fromMe: meta.fromMe };
 }
 
 function canonicalizeSupportedJid(jid: string | null | undefined): string | undefined {
@@ -52,8 +57,8 @@ export function canonicalizeWhatsAppDirectJids(
 ): string[] | undefined {
   const canonical = new Set<string>();
   for (const value of values ?? []) {
-    const classified = classifyWhatsAppJid(value);
-    if (classified.kind === "pn" || classified.kind === "lid") {
+    const classified = classifyWhatsAppDirectJid(value);
+    if (classified) {
       canonical.add(classified.jid);
     }
   }
@@ -64,26 +69,21 @@ export function cacheInboundMessageMeta(
   accountId: string,
   remoteJid: string,
   messageId: string,
-  meta: QuotedMeta & { remoteE164?: string; remoteJids?: string[] },
+  meta: QuotedMeta & ComparableIdentityFacts,
 ): void {
   const canonicalRemoteJid = canonicalizeSupportedJid(remoteJid);
   if (!accountId || !messageId || !canonicalRemoteJid) {
     return;
   }
-  if (cache.size >= MAX_ENTRIES) {
-    const oldest = cache.keys().next().value;
-    if (oldest) {
-      cache.delete(oldest);
-    }
-  }
   cache.set(makeCacheKey(accountId, canonicalRemoteJid, messageId), {
     ...meta,
+    remoteJid: canonicalRemoteJid,
     participant: canonicalizeSupportedJid(meta.participant),
-    participantE164: canonicalizeComparableE164(meta.participantE164),
     remoteE164: canonicalizeComparableE164(meta.remoteE164),
     remoteJids: canonicalizeWhatsAppDirectJids(meta.remoteJids),
     ts: Date.now(),
   });
+  pruneMapToMaxSize(cache, MAX_ENTRIES);
 }
 
 export function lookupInboundMessageMeta(
@@ -104,25 +104,11 @@ export function lookupInboundMessageMeta(
     cache.delete(cacheKey);
     return undefined;
   }
-  return {
-    participant: entry.participant,
-    participantE164: entry.participantE164,
-    body: entry.body,
-    fromMe: entry.fromMe,
-  };
+  return toQuotedMeta(entry);
 }
 
 function isGroupJid(jid: string | undefined): boolean {
   return classifyWhatsAppJid(jid).kind === "group";
-}
-
-function areComparableE164sEqual(left: string | undefined, right: string | undefined): boolean {
-  const normalizedLeft = left?.trim();
-  const normalizedRight = right?.trim();
-  if (!normalizedLeft || !normalizedRight) {
-    return false;
-  }
-  return normalizedLeft === normalizedRight;
 }
 
 function matchesQuotedConversationTarget(
@@ -141,8 +127,7 @@ function matchesQuotedConversationTarget(
   const targetE164 = directPnE164(targetJid);
   return (
     areSameWhatsAppJid(targetJid, candidate.participant) ||
-    areComparableE164sEqual(targetE164, candidate.remoteE164) ||
-    areComparableE164sEqual(targetE164, candidate.participantE164)
+    (targetE164 !== undefined && targetE164 === candidate.remoteE164)
   );
 }
 
@@ -157,13 +142,7 @@ export function lookupInboundMessageMetaForTarget(
   }
   const exact = lookupInboundMessageMeta(accountId, canonicalTargetJid, messageId);
   if (exact) {
-    return {
-      remoteJid: canonicalTargetJid,
-      participant: exact.participant,
-      participantE164: exact.participantE164,
-      body: exact.body,
-      fromMe: exact.fromMe,
-    };
+    return { remoteJid: canonicalTargetJid, ...exact };
   }
   const prefix = `${accountId}:`;
   const suffix = `:${messageId}`;
@@ -176,33 +155,15 @@ export function lookupInboundMessageMetaForTarget(
       cache.delete(cacheKey);
       continue;
     }
-    const remoteJid = cacheKey.slice(prefix.length, cacheKey.length - suffix.length);
-    const candidate = {
-      remoteJid,
-      participant: entry.participant,
-      participantE164: entry.participantE164,
-      remoteE164: entry.remoteE164,
-      remoteJids: entry.remoteJids,
-      body: entry.body,
-      fromMe: entry.fromMe,
-    };
-    if (!matchesQuotedConversationTarget(canonicalTargetJid, candidate)) {
+    if (!matchesQuotedConversationTarget(canonicalTargetJid, entry)) {
       continue;
     }
     if (matched) {
       return undefined;
     }
-    matched = candidate;
+    matched = entry;
   }
-  return matched
-    ? {
-        remoteJid: matched.remoteJid,
-        participant: matched.participant,
-        participantE164: matched.participantE164,
-        body: matched.body,
-        fromMe: matched.fromMe,
-      }
-    : undefined;
+  return matched ? { remoteJid: matched.remoteJid, ...toQuotedMeta(matched) } : undefined;
 }
 
 export function buildQuotedMessageOptions(params: {

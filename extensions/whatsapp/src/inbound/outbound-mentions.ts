@@ -1,6 +1,11 @@
 // Whatsapp plugin module implements outbound mentions behavior.
 import type { AnyMessageContent } from "baileys";
-import { classifyWhatsAppJid, encodeWhatsAppJid, type WhatsAppDirectJid } from "../whatsapp-jid.js";
+import { stripWhatsAppTargetPrefixes } from "../whatsapp-jid-syntax.js";
+import {
+  classifyWhatsAppDirectJid,
+  classifyWhatsAppJid,
+  encodeWhatsAppJid,
+} from "../whatsapp-jid.js";
 
 export type WhatsAppOutboundMentionParticipant =
   | string
@@ -58,7 +63,7 @@ function isInRange(index: number, ranges: readonly TextRange[]): boolean {
 }
 
 function normalizeKnownUserJid(value: string): string | null {
-  const trimmed = value.replace(/^whatsapp:/i, "").trim();
+  const trimmed = stripWhatsAppTargetPrefixes(value);
   const classified = classifyWhatsAppJid(trimmed);
   if (classified.kind === "pn" || classified.kind === "lid") {
     return classified.jid;
@@ -71,25 +76,16 @@ function normalizeKnownUserJid(value: string): string | null {
   return digits ? encodeWhatsAppJid(digits, "s.whatsapp.net") : null;
 }
 
-function classifyKnownUserJid(value: string): WhatsAppDirectJid | null {
-  const normalized = normalizeKnownUserJid(value);
-  if (!normalized) {
-    return null;
-  }
-  const classified = classifyWhatsAppJid(normalized);
-  return classified.kind === "pn" || classified.kind === "lid" ? classified : null;
-}
-
 function extractPhoneDigits(value: string | null | undefined): string | null {
   if (!value) {
     return null;
   }
-  const trimmed = value.replace(/^whatsapp:/i, "").trim();
+  const trimmed = stripWhatsAppTargetPrefixes(value);
   if (trimmed.startsWith("+") || /^\d+$/.test(trimmed)) {
     const digits = trimmed.replace(/\D/g, "");
     return digits || null;
   }
-  const classified = classifyKnownUserJid(trimmed);
+  const classified = classifyWhatsAppDirectJid(normalizeKnownUserJid(trimmed));
   return classified?.kind === "pn" ? classified.user : null;
 }
 
@@ -97,16 +93,16 @@ function extractLidDigits(value: string | null | undefined): string | null {
   if (!value) {
     return null;
   }
-  const classified = classifyKnownUserJid(value);
+  const classified = classifyWhatsAppDirectJid(normalizeKnownUserJid(value));
   return classified?.kind === "lid" ? classified.user : null;
 }
 
 function isLidJid(jid: string): boolean {
-  return classifyKnownUserJid(jid)?.kind === "lid";
+  return classifyWhatsAppDirectJid(jid)?.kind === "lid";
 }
 
 function lidReplacementText(jid: string): string | undefined {
-  const classified = classifyKnownUserJid(jid);
+  const classified = classifyWhatsAppDirectJid(jid);
   return classified?.kind === "lid" ? `@${classified.user}` : undefined;
 }
 

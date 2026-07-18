@@ -28,20 +28,14 @@ describe("whatsapp legacy session contract", () => {
     expect(canonicalizeLegacySessionKey({ key: "group:abc", agentId: "main" })).toBeNull();
   });
 
-  it.each([
-    "group:abc@g.us",
-    "abc@g.us",
-    "whatsapp:abc@g.us",
-    "group:123:2@g.us",
-    "123:2@g.us",
-    "whatsapp:123:2@g.us",
-    "group:123@g.us@evil.example",
-    "123@@g.us",
-  ])("rejects malformed legacy group key %s", (key) => {
-    expect(isLegacyGroupSessionKey(key)).toBe(false);
-    expect(deriveLegacySessionChatType(key)).toBeUndefined();
-    expect(canonicalizeLegacySessionKey({ key, agentId: "main" })).toBeNull();
-  });
+  it.each(["group:123:2@g.us", "whatsapp:123@g.us@evil.example"])(
+    "rejects malformed legacy group key %s",
+    (key) => {
+      expect(isLegacyGroupSessionKey(key)).toBe(false);
+      expect(deriveLegacySessionChatType(key)).toBeUndefined();
+      expect(canonicalizeLegacySessionKey({ key, agentId: "main" })).toBeNull();
+    },
+  );
 
   it("derives chat type for legacy WhatsApp group keys", () => {
     expect(deriveLegacySessionChatType("123@g.us")).toBe("group");

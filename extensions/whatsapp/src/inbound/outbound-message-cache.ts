@@ -15,13 +15,10 @@ export function createWhatsAppOutboundMessageRecorder(params: {
 }) {
   const remember = (
     remoteJid: string,
-    result: unknown,
+    result: WAMessage | undefined,
     identity?: WhatsAppPreparedOutboundIdentity,
   ) => {
-    const messageId =
-      typeof result === "object" && result && "key" in result
-        ? ((result as { key?: { id?: string } }).key?.id ?? "")
-        : "";
+    const messageId = result?.key.id ?? "";
     if (!messageId) {
       return;
     }
@@ -30,10 +27,7 @@ export function createWhatsAppOutboundMessageRecorder(params: {
       remoteJid,
       messageId,
     });
-    const message =
-      typeof result === "object" && result && "message" in result
-        ? (result as { message?: proto.IMessage }).message
-        : undefined;
+    const message = result?.message;
     params.rememberBaileysMessage(remoteJid, messageId, message);
     // Baileys derives the participant for fromMe quotes from its own userJid.
     // Retain only the facts needed to avoid the cache-miss fromMe=false fallback.

@@ -47,7 +47,7 @@ import {
   toWhatsappJid,
   toWhatsappJidWithLid,
 } from "../text-runtime.js";
-import { classifyWhatsAppJid, isWhatsAppDirectJid } from "../whatsapp-jid.js";
+import { classifyWhatsAppDirectJid, classifyWhatsAppJid } from "../whatsapp-jid.js";
 import {
   checkInboundAccessControl,
   type AcceptedInboundAccessControlResult,
@@ -760,7 +760,7 @@ export async function attachWebInboxToSocket(
     currentSock: WASocket,
     readinessOptions?: { rememberReady?: boolean; useVerifiedReady?: boolean },
   ) => {
-    if (!isWhatsAppDirectJid(jid)) {
+    if (!classifyWhatsAppDirectJid(jid)) {
       return;
     }
     if (readinessOptions?.useVerifiedReady && consumeVerifiedSendReady(jid, currentSock)) {
@@ -1438,10 +1438,6 @@ export async function attachWebInboxToSocket(
         inboundMessage.event.id,
         {
           participant: inboundMessage.platform.senderJid,
-          participantE164:
-            admission.conversation.kind === "direct"
-              ? inboundMessage.platform.senderE164
-              : undefined,
           remoteE164:
             admission.conversation.kind === "direct"
               ? inboundMessage.platform.senderE164

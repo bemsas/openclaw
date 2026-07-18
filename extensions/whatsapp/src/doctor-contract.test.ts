@@ -10,6 +10,10 @@ function whatsappConfig(entry: Record<string, unknown>): OpenClawConfig {
   return { channels: { whatsapp: entry } } as never;
 }
 
+async function writeLidMapping(dir: string, lid: string, phone: string | number): Promise<void> {
+  await fs.writeFile(path.join(dir, `lid-mapping-${lid}_reverse.json`), JSON.stringify(phone));
+}
+
 describe("whatsapp streaming legacy config rules", () => {
   const rootRule = legacyConfigRules.find((rule) => rule.path.join(".") === "channels.whatsapp");
 
@@ -127,14 +131,8 @@ describe("whatsapp allowFrom LID upgrade", () => {
 
   it("migrates only entries backed by a stored reverse mapping", async () => {
     await withTempDir("openclaw-whatsapp-doctor-", async (authDir) => {
-      await fs.writeFile(
-        path.join(authDir, "lid-mapping-777_reverse.json"),
-        JSON.stringify("15551230001"),
-      );
-      await fs.writeFile(
-        path.join(authDir, "lid-mapping-888_reverse.json"),
-        JSON.stringify(15551230002),
-      );
+      await writeLidMapping(authDir, "777", "15551230001");
+      await writeLidMapping(authDir, "888", 15551230002);
       const result = normalizeCompatibilityConfig({
         cfg: whatsappConfig({
           authDir,
@@ -159,10 +157,7 @@ describe("whatsapp allowFrom LID upgrade", () => {
 
   it("uses the owning account auth directory", async () => {
     await withTempDir("openclaw-whatsapp-doctor-account-", async (authDir) => {
-      await fs.writeFile(
-        path.join(authDir, "lid-mapping-999_reverse.json"),
-        JSON.stringify("447700900123"),
-      );
+      await writeLidMapping(authDir, "999", "447700900123");
       const result = normalizeCompatibilityConfig({
         cfg: whatsappConfig({
           accounts: {
@@ -189,10 +184,7 @@ describe("whatsapp allowFrom LID upgrade", () => {
       const accountAuthDir = path.join(stateDir, "work-auth");
       await fs.mkdir(credentialsDir, { recursive: true });
       await fs.mkdir(accountAuthDir);
-      await fs.writeFile(
-        path.join(credentialsDir, "lid-mapping-321_reverse.json"),
-        JSON.stringify("15550000321"),
-      );
+      await writeLidMapping(credentialsDir, "321", "15550000321");
       vi.resetModules();
       try {
         const { normalizeCompatibilityConfig: normalizeFreshConfig } =
@@ -229,10 +221,7 @@ describe("whatsapp allowFrom LID upgrade", () => {
       const secondAuthDir = path.join(rootDir, "second");
       await fs.mkdir(firstAuthDir);
       await fs.mkdir(secondAuthDir);
-      await fs.writeFile(
-        path.join(firstAuthDir, "lid-mapping-456_reverse.json"),
-        JSON.stringify("15550000456"),
-      );
+      await writeLidMapping(firstAuthDir, "456", "15550000456");
       const result = normalizeCompatibilityConfig({
         cfg: whatsappConfig({
           allowFrom: ["456@lid"],
@@ -257,10 +246,7 @@ describe("whatsapp allowFrom LID upgrade", () => {
       const overridingAuthDir = path.join(rootDir, "overriding");
       await fs.mkdir(inheritedAuthDir);
       await fs.mkdir(overridingAuthDir);
-      await fs.writeFile(
-        path.join(inheritedAuthDir, "lid-mapping-654_reverse.json"),
-        JSON.stringify("15550000654"),
-      );
+      await writeLidMapping(inheritedAuthDir, "654", "15550000654");
       const result = normalizeCompatibilityConfig({
         cfg: whatsappConfig({
           allowFrom: ["654@lid"],
@@ -285,14 +271,8 @@ describe("whatsapp allowFrom LID upgrade", () => {
       const secondAuthDir = path.join(rootDir, "second");
       await fs.mkdir(firstAuthDir);
       await fs.mkdir(secondAuthDir);
-      await fs.writeFile(
-        path.join(firstAuthDir, "lid-mapping-123_reverse.json"),
-        JSON.stringify("15550000001"),
-      );
-      await fs.writeFile(
-        path.join(secondAuthDir, "lid-mapping-123_reverse.json"),
-        JSON.stringify("15550000002"),
-      );
+      await writeLidMapping(firstAuthDir, "123", "15550000001");
+      await writeLidMapping(secondAuthDir, "123", "15550000002");
       const result = normalizeCompatibilityConfig({
         cfg: whatsappConfig({
           allowFrom: ["123@lid"],

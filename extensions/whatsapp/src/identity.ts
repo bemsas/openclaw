@@ -1,6 +1,6 @@
 // Whatsapp plugin module implements identity behavior.
 import { jidToE164, normalizeE164 } from "./text-runtime.js";
-import { classifyWhatsAppJid, type WhatsAppDirectJid } from "./whatsapp-jid.js";
+import { classifyWhatsAppDirectJid } from "./whatsapp-jid.js";
 
 export type WhatsAppIdentity = {
   jid?: string | null;
@@ -61,17 +61,12 @@ type LegacyMentionsLike = {
   };
 };
 
-function classifyDirectIdentityJid(jid: string | null | undefined): WhatsAppDirectJid | null {
-  const classified = classifyWhatsAppJid(jid);
-  return classified.kind === "pn" || classified.kind === "lid" ? classified : null;
-}
-
 export function resolveComparableIdentity(
   identity: WhatsAppIdentity | WhatsAppSelfIdentity | null | undefined,
   authDir?: string,
 ): WhatsAppIdentity {
-  const rawJid = classifyDirectIdentityJid(identity?.jid);
-  const rawLid = classifyDirectIdentityJid(identity?.lid);
+  const rawJid = classifyWhatsAppDirectJid(identity?.jid);
+  const rawLid = classifyWhatsAppDirectJid(identity?.lid);
   const lid =
     (rawLid?.kind === "lid" ? rawLid.jid : null) ?? (rawJid?.kind === "lid" ? rawJid.jid : null);
   const jid = rawJid?.kind === "pn" ? rawJid.jid : null;

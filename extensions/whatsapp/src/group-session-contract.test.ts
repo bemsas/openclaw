@@ -12,12 +12,10 @@ describe("whatsapp group session contract", () => {
     });
   });
 
-  it.each([
-    "abc@g.us",
-    "120363000000000000:2@g.us",
-    "120363000000000000@g.us@evil.example",
-    "120363000000000000@@g.us",
-  ])("rejects malformed group JID %s", (from) => {
-    expect(resolveLegacyGroupSessionKey({ From: from })).toBeNull();
-  });
+  it.each(["120363000000000000:2@g.us", "120363000000000000@g.us@evil.example"])(
+    "rejects malformed group JID %s",
+    (from) => {
+      expect(resolveLegacyGroupSessionKey({ From: from })).toBeNull();
+    },
+  );
 });

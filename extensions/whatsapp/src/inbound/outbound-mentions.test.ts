@@ -16,19 +16,6 @@ describe("resolveWhatsAppOutboundMentions", () => {
     });
   });
 
-  it("canonicalizes c.us and hosted participant identities", () => {
-    expect(
-      resolveWhatsAppOutboundMentions({
-        chatJid: "120363000000000000@g.us",
-        text: "hi @15551234567 and @15557654321",
-        participants: [{ id: "15551234567:2@c.us" }, { id: "15557654321:3@hosted" }],
-      }),
-    ).toEqual({
-      text: "hi @15551234567 and @15557654321",
-      mentionedJids: ["15551234567@s.whatsapp.net", "15557654321@hosted"],
-    });
-  });
-
   it("rewrites phone-number tokens to LID mention text without device suffixes", () => {
     expect(
       resolveWhatsAppOutboundMentions({

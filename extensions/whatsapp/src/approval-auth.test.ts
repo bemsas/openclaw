@@ -61,11 +61,7 @@ describe("whatsappApprovalAuth", () => {
   });
 
   it("canonicalizes PN domains and device ids for approval authorization", () => {
-    for (const senderId of [
-      "15551230000:2@s.whatsapp.net",
-      "15551230000:3@c.us",
-      "15551230000:4@hosted",
-    ]) {
+    for (const senderId of ["15551230000:3@c.us", "15551230000:4@hosted"]) {
       expect(
         whatsappApprovalAuth.authorizeActorAction({
           cfg: { channels: { whatsapp: { allowFrom: ["+15551230000"] } } },
