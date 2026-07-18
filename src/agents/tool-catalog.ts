@@ -1,9 +1,11 @@
-import type { OpenClawConfig } from "../config/types.openclaw.js";
-import { resolveSwarmConfig } from "./swarm-config.js";
 /**
  * Core tool catalog and profile defaults.
  * Drives built-in profile allowlists, group expansion, and UI section metadata
  * for OpenClaw-owned tools.
+ *
+ * This module is bundled into the Control UI via tool-policy-shared. Keep it
+ * pure data + tiny pure functions: a value import of server config/runtime
+ * modules here drags the whole gateway graph into the ui build and breaks it.
  */
 import {
   AGENTS_WAIT_TOOL_DISPLAY_SUMMARY,
@@ -524,11 +526,10 @@ export function resolveCoreToolProfilePolicy(profile?: string): ToolProfilePolic
 }
 
 /** Lists core tools grouped into UI sections. */
-export function listCoreToolSections(params?: {
-  config?: OpenClawConfig;
-  agentId?: string;
-}): CoreToolSection[] {
-  const swarmEnabled = resolveSwarmConfig(params?.config, params?.agentId).enabled;
+export function listCoreToolSections(params?: { swarmEnabled?: boolean }): CoreToolSection[] {
+  // Callers resolve the swarm gate (resolveSwarmConfig) and pass the fact in;
+  // resolving config here would couple this ui-shared module to the server graph.
+  const swarmEnabled = params?.swarmEnabled === true;
   return CORE_TOOL_SECTION_ORDER.map((section) => ({
     id: section.id,
     label: section.label,
