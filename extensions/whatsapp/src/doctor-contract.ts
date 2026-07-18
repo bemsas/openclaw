@@ -6,8 +6,8 @@ import type {
 import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
 import { asObjectRecord, defineChannelAliasMigration } from "openclaw/plugin-sdk/runtime-doctor";
 import {
-  migrateWhatsAppLidAllowFromConfig,
-  whatsAppLidAllowFromLegacyRules,
+  migrateWhatsAppLidAllowlistsConfig,
+  whatsAppLidAllowlistLegacyRules,
 } from "./allowlist-doctor.js";
 import { normalizeCompatibilityConfig as normalizeAckReactionConfig } from "./doctor.js";
 
@@ -24,7 +24,7 @@ const streamingAliasMigration = defineChannelAliasMigration({
 
 export const legacyConfigRules: ChannelDoctorLegacyConfigRule[] = [
   ...streamingAliasMigration.legacyConfigRules,
-  ...whatsAppLidAllowFromLegacyRules,
+  ...whatsAppLidAllowlistLegacyRules,
 ];
 
 /** Deep-fills fields missing from target with copies of source values. */
@@ -152,10 +152,10 @@ export function normalizeCompatibilityConfig({
     accountsWithoutStreamingBefore,
     changes: aliases.changes,
   });
-  const lidAllowFrom = migrateWhatsAppLidAllowFromConfig(seeded);
+  const lidAllowlists = migrateWhatsAppLidAllowlistsConfig(seeded);
   return {
-    config: lidAllowFrom.config,
-    changes: [...aliases.changes, ...lidAllowFrom.changes],
-    warnings: lidAllowFrom.warnings,
+    config: lidAllowlists.config,
+    changes: [...aliases.changes, ...lidAllowlists.changes],
+    warnings: lidAllowlists.warnings,
   };
 }

@@ -115,18 +115,20 @@ describe("whatsapp normalizeCompatibilityConfig streaming aliases", () => {
   });
 });
 
-describe("whatsapp allowFrom LID upgrade", () => {
+describe("whatsapp allowlist LID upgrade", () => {
   it("reports LID entries at channel and account scope", () => {
     const rootRule = legacyConfigRules.find((rule) =>
-      rule.message.startsWith("WhatsApp allowFrom contains LID JIDs"),
+      rule.message.startsWith("WhatsApp allowFrom or groupAllowFrom contains LID JIDs"),
     );
     const accountsRule = legacyConfigRules.find((rule) =>
-      rule.message.startsWith("A WhatsApp account allowFrom contains LID JIDs"),
+      rule.message.startsWith("A WhatsApp account allowFrom or groupAllowFrom contains LID JIDs"),
     );
 
     expect(rootRule?.match?.({ allowFrom: ["whatsapp:777:2@hosted.lid"] }, {})).toBe(true);
+    expect(rootRule?.match?.({ groupAllowFrom: ["whatsapp:777:2@hosted.lid"] }, {})).toBe(true);
     expect(rootRule?.match?.({ allowFrom: ["+15551230000"] }, {})).toBe(false);
     expect(accountsRule?.match?.({ work: { allowFrom: ["888@lid"] } }, {})).toBe(true);
+    expect(accountsRule?.match?.({ work: { groupAllowFrom: ["888@lid"] } }, {})).toBe(true);
   });
 
   it("migrates only entries backed by a stored reverse mapping", async () => {
@@ -164,6 +166,7 @@ describe("whatsapp allowFrom LID upgrade", () => {
             work: {
               authDir,
               allowFrom: ["999:2@hosted.lid"],
+              groupAllowFrom: ["999:3@lid"],
             },
           },
         }),
@@ -171,9 +174,10 @@ describe("whatsapp allowFrom LID upgrade", () => {
 
       const accounts = result.config.channels?.whatsapp?.accounts as Record<
         string,
-        { allowFrom?: string[] }
+        { allowFrom?: string[]; groupAllowFrom?: string[] }
       >;
       expect(accounts.work?.allowFrom).toEqual(["447700900123"]);
+      expect(accounts.work?.groupAllowFrom).toEqual(["447700900123"]);
       expect(result.warnings).toEqual([]);
     });
   });
@@ -215,55 +219,66 @@ describe("whatsapp allowFrom LID upgrade", () => {
     });
   });
 
-  it("requires a root mapping in every account that inherits the root allowlist", async () => {
-    await withTempDir("openclaw-whatsapp-doctor-root-scope-", async (rootDir) => {
-      const firstAuthDir = path.join(rootDir, "first");
-      const secondAuthDir = path.join(rootDir, "second");
-      await fs.mkdir(firstAuthDir);
-      await fs.mkdir(secondAuthDir);
-      await writeLidMapping(firstAuthDir, "456", "15550000456");
-      const result = normalizeCompatibilityConfig({
-        cfg: whatsappConfig({
-          allowFrom: ["456@lid"],
-          accounts: {
-            first: { authDir: firstAuthDir },
-            second: { authDir: secondAuthDir },
-          },
-        }),
-      });
-
-      expect(result.config.channels?.whatsapp?.allowFrom).toEqual(["456@lid"]);
-      expect(result.changes).toEqual([]);
-      expect(result.warnings).toEqual([
-        expect.stringContaining("no verified LID→PN mapping was found"),
-      ]);
-    });
-  });
-
-  it("does not require root mappings from accounts with their own allowlist", async () => {
-    await withTempDir("openclaw-whatsapp-doctor-root-override-", async (rootDir) => {
-      const inheritedAuthDir = path.join(rootDir, "inherited");
-      const overridingAuthDir = path.join(rootDir, "overriding");
-      await fs.mkdir(inheritedAuthDir);
-      await fs.mkdir(overridingAuthDir);
-      await writeLidMapping(inheritedAuthDir, "654", "15550000654");
-      const result = normalizeCompatibilityConfig({
-        cfg: whatsappConfig({
-          allowFrom: ["654@lid"],
-          accounts: {
-            inherited: { authDir: inheritedAuthDir },
-            overriding: {
-              authDir: overridingAuthDir,
-              allowFrom: ["+15550000999"],
+  it.each(["allowFrom", "groupAllowFrom"] as const)(
+    "requires a root mapping in every account that inherits root %s",
+    async (key) => {
+      await withTempDir("openclaw-whatsapp-doctor-root-scope-", async (rootDir) => {
+        const otherKey = key === "allowFrom" ? "groupAllowFrom" : "allowFrom";
+        const firstAuthDir = path.join(rootDir, "first");
+        const secondAuthDir = path.join(rootDir, "second");
+        await fs.mkdir(firstAuthDir);
+        await fs.mkdir(secondAuthDir);
+        await writeLidMapping(firstAuthDir, "456", "15550000456");
+        const result = normalizeCompatibilityConfig({
+          cfg: whatsappConfig({
+            [key]: ["456@lid"],
+            accounts: {
+              first: { authDir: firstAuthDir },
+              second: { authDir: secondAuthDir, [otherKey]: ["+15550000999"] },
             },
-          },
-        }),
-      });
+          }),
+        });
 
-      expect(result.config.channels?.whatsapp?.allowFrom).toEqual(["15550000654"]);
-      expect(result.warnings).toEqual([]);
-    });
-  });
+        const whatsapp = result.config.channels?.whatsapp as Record<string, unknown> | undefined;
+        expect(whatsapp?.[key]).toEqual(["456@lid"]);
+        expect(result.changes).toEqual([]);
+        expect(result.warnings).toEqual([
+          expect.stringContaining(
+            `channels.whatsapp.${key} entry "456@lid" was not migrated because no verified LID→PN mapping was found`,
+          ),
+        ]);
+      });
+    },
+  );
+
+  it.each(["allowFrom", "groupAllowFrom"] as const)(
+    "does not require root %s mappings from accounts with their own override",
+    async (key) => {
+      await withTempDir("openclaw-whatsapp-doctor-root-override-", async (rootDir) => {
+        const inheritedAuthDir = path.join(rootDir, "inherited");
+        const overridingAuthDir = path.join(rootDir, "overriding");
+        await fs.mkdir(inheritedAuthDir);
+        await fs.mkdir(overridingAuthDir);
+        await writeLidMapping(inheritedAuthDir, "654", "15550000654");
+        const result = normalizeCompatibilityConfig({
+          cfg: whatsappConfig({
+            [key]: ["654@lid"],
+            accounts: {
+              inherited: { authDir: inheritedAuthDir },
+              overriding: {
+                authDir: overridingAuthDir,
+                [key]: ["+15550000999"],
+              },
+            },
+          }),
+        });
+
+        const whatsapp = result.config.channels?.whatsapp as Record<string, unknown> | undefined;
+        expect(whatsapp?.[key]).toEqual(["15550000654"]);
+        expect(result.warnings).toEqual([]);
+      });
+    },
+  );
 
   it("leaves an entry unchanged when stored mappings conflict", async () => {
     await withTempDir("openclaw-whatsapp-doctor-conflict-", async (rootDir) => {

@@ -13,7 +13,7 @@ import {
   stripWhatsAppTargetPrefixes,
 } from "./whatsapp-jid-syntax.js";
 
-function parseLidAllowFromEntry(value: unknown) {
+function parseLidAllowlistEntry(value: unknown) {
   if (typeof value !== "string") {
     return null;
   }
@@ -21,39 +21,45 @@ function parseLidAllowFromEntry(value: unknown) {
   return parsed?.server === "lid" || parsed?.server === "hosted.lid" ? parsed : null;
 }
 
-function containsLidAllowFrom(value: unknown): boolean {
+const WHATSAPP_ALLOWLIST_KEYS = ["allowFrom", "groupAllowFrom"] as const;
+type WhatsAppAllowlistKey = (typeof WHATSAPP_ALLOWLIST_KEYS)[number];
+
+function containsLidAllowlist(value: unknown): boolean {
   const entry = asObjectRecord(value);
-  return Array.isArray(entry?.allowFrom) && entry.allowFrom.some(parseLidAllowFromEntry);
+  return WHATSAPP_ALLOWLIST_KEYS.some((key) => {
+    const entries = entry?.[key];
+    return Array.isArray(entries) && entries.some(parseLidAllowlistEntry);
+  });
 }
 
-export const whatsAppLidAllowFromLegacyRules: ChannelDoctorLegacyConfigRule[] = [
+export const whatsAppLidAllowlistLegacyRules: ChannelDoctorLegacyConfigRule[] = [
   {
     path: ["channels", "whatsapp"],
     message:
-      "WhatsApp allowFrom contains LID JIDs. Run doctor --fix to migrate entries backed by verified LID→PN mappings; replace any unresolved entries with E.164 numbers.",
-    match: containsLidAllowFrom,
+      "WhatsApp allowFrom or groupAllowFrom contains LID JIDs. Run doctor --fix to migrate entries backed by verified LID→PN mappings; replace any unresolved entries with E.164 numbers.",
+    match: containsLidAllowlist,
   },
   {
     path: ["channels", "whatsapp", "accounts"],
     message:
-      "A WhatsApp account allowFrom contains LID JIDs. Run doctor --fix to migrate entries backed by verified LID→PN mappings; replace any unresolved entries with E.164 numbers.",
+      "A WhatsApp account allowFrom or groupAllowFrom contains LID JIDs. Run doctor --fix to migrate entries backed by verified LID→PN mappings; replace any unresolved entries with E.164 numbers.",
     match: (value) => {
       const accounts = asObjectRecord(value);
-      return Boolean(accounts && Object.values(accounts).some(containsLidAllowFrom));
+      return Boolean(accounts && Object.values(accounts).some(containsLidAllowlist));
     },
   },
 ];
 
-function migrateLidAllowFrom(params: {
-  allowFrom: unknown[];
+function migrateLidAllowlistEntries(params: {
+  entries: unknown[];
   configPath: string;
   mappingScopes: readonly (readonly string[])[];
   changes: string[];
   warnings: string[];
 }): unknown[] | null {
   let changed = false;
-  const allowFrom = params.allowFrom.map((entry) => {
-    const parsed = parseLidAllowFromEntry(entry);
+  const entries = params.entries.map((entry) => {
+    const parsed = parseLidAllowlistEntry(entry);
     if (!parsed) {
       return entry;
     }
@@ -82,22 +88,23 @@ function migrateLidAllowFrom(params: {
     );
     return phoneDigits;
   });
-  return changed ? allowFrom : null;
+  return changed ? entries : null;
 }
 
-function resolveRootAllowFromMappingScopes(params: {
+function resolveRootAllowlistMappingScopes(params: {
   cfg: OpenClawConfig;
   accounts: Record<string, unknown> | null;
+  key: WhatsAppAllowlistKey;
 }): string[][] {
   const defaultEntry = asObjectRecord(
     resolveAccountEntry(params.accounts ?? undefined, DEFAULT_ACCOUNT_ID),
   );
-  const defaultOverridesRoot = Array.isArray(defaultEntry?.allowFrom);
+  const defaultOverridesRoot = Array.isArray(defaultEntry?.[params.key]);
   return listWhatsAppAccountIds(params.cfg).flatMap((accountId) => {
     const accountEntry = asObjectRecord(
       resolveAccountEntry(params.accounts ?? undefined, accountId),
     );
-    const accountOverridesRoot = Array.isArray(accountEntry?.allowFrom);
+    const accountOverridesRoot = Array.isArray(accountEntry?.[params.key]);
     if (
       accountOverridesRoot ||
       (accountId.trim().toLowerCase() !== DEFAULT_ACCOUNT_ID && defaultOverridesRoot)
@@ -108,7 +115,35 @@ function resolveRootAllowFromMappingScopes(params: {
   });
 }
 
-export function migrateWhatsAppLidAllowFromConfig(
+function migrateLidAllowlistFields(params: {
+  entry: Record<string, unknown>;
+  configPath: string;
+  resolveMappingScopes: (key: WhatsAppAllowlistKey) => readonly (readonly string[])[];
+  changes: string[];
+  warnings: string[];
+}): Record<string, unknown> | null {
+  let nextEntry: Record<string, unknown> | null = null;
+  for (const key of WHATSAPP_ALLOWLIST_KEYS) {
+    const entries = params.entry[key];
+    if (!Array.isArray(entries)) {
+      continue;
+    }
+    const migrated = migrateLidAllowlistEntries({
+      entries,
+      configPath: `${params.configPath}.${key}`,
+      mappingScopes: params.resolveMappingScopes(key),
+      changes: params.changes,
+      warnings: params.warnings,
+    });
+    if (migrated) {
+      nextEntry ??= { ...params.entry };
+      nextEntry[key] = migrated;
+    }
+  }
+  return nextEntry;
+}
+
+export function migrateWhatsAppLidAllowlistsConfig(
   cfg: OpenClawConfig,
 ): ChannelDoctorConfigMutation {
   const channels = cfg.channels as Record<string, unknown> | undefined;
@@ -121,18 +156,15 @@ export function migrateWhatsAppLidAllowFromConfig(
   const warnings: string[] = [];
   let nextEntry = entry;
   const accounts = asObjectRecord(entry.accounts);
-  const rootAllowFrom = entry.allowFrom;
-  if (Array.isArray(rootAllowFrom)) {
-    const migrated = migrateLidAllowFrom({
-      allowFrom: rootAllowFrom,
-      configPath: "channels.whatsapp.allowFrom",
-      mappingScopes: resolveRootAllowFromMappingScopes({ cfg, accounts }),
-      changes,
-      warnings,
-    });
-    if (migrated) {
-      nextEntry = { ...nextEntry, allowFrom: migrated };
-    }
+  const migratedRoot = migrateLidAllowlistFields({
+    entry,
+    configPath: "channels.whatsapp",
+    resolveMappingScopes: (key) => resolveRootAllowlistMappingScopes({ cfg, accounts, key }),
+    changes,
+    warnings,
+  });
+  if (migratedRoot) {
+    nextEntry = migratedRoot;
   }
 
   let accountsChanged = false;
@@ -140,15 +172,15 @@ export function migrateWhatsAppLidAllowFromConfig(
     ? Object.fromEntries(
         Object.entries(accounts).map(([accountId, rawAccount]) => {
           const account = asObjectRecord(rawAccount);
-          if (!account || !Array.isArray(account.allowFrom)) {
+          if (!account) {
             return [accountId, rawAccount];
           }
-          const migrated = migrateLidAllowFrom({
-            allowFrom: account.allowFrom,
-            configPath: `channels.whatsapp.accounts.${accountId}.allowFrom`,
+          const migrated = migrateLidAllowlistFields({
+            entry: account,
+            configPath: `channels.whatsapp.accounts.${accountId}`,
             // LIDs are account-scoped. A mapping from another account must never
             // authorize a sender in this account's allowlist.
-            mappingScopes: [[resolveWhatsAppAuthDir({ cfg, accountId }).authDir]],
+            resolveMappingScopes: () => [[resolveWhatsAppAuthDir({ cfg, accountId }).authDir]],
             changes,
             warnings,
           });
@@ -156,7 +188,7 @@ export function migrateWhatsAppLidAllowFromConfig(
             return [accountId, rawAccount];
           }
           accountsChanged = true;
-          return [accountId, { ...account, allowFrom: migrated }];
+          return [accountId, migrated];
         }),
       )
     : accounts;
