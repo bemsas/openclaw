@@ -215,8 +215,7 @@ export function readPluginSdkSurfaceBudgets(env = process.env) {
       // +1: speech-settings keeps agent prompt imports off the synthesis/runtime graph.
       // +1: meeting-runtime barrel: browser meeting-bot core behind MeetingPlatformAdapter.
       // +1: question-gateway-runtime resolves ask_user choices for channel plugins.
-      // +1: focused base64 media helpers.
-      332,
+      331,
       env,
     ),
     // ScopeTree adds six channel-policy exports, mirrored by compat, including three functions.
@@ -225,8 +224,6 @@ export function readPluginSdkSurfaceBudgets(env = process.env) {
     // Its length-prefixed segment encoder and scope-key builder add two functions, also mirrored.
     // The focused HTML entity runtime and quote-aware HTML tokenizer add one public function each.
     // Plugin service Gateway event scope and emitter types add four facade exports.
-    // The focused base64 facade adds four exports, including three functions.
-    // media-mime adds the canonical kindFromMime classifier.
     publicExports: readPluginSdkSurfaceBudgetEnv(
       "OPENCLAW_PLUGIN_SDK_MAX_PUBLIC_EXPORTS",
       // +4: registerMcpServerConnectionResolver context/result/resolver/registration types (#106229).
@@ -272,8 +269,7 @@ export function readPluginSdkSurfaceBudgets(env = process.env) {
       // +1: centralized remember-across-conversations effective-default resolver.
       // +4: gateway-backed harness question runner, claim/cancel helpers, and caller type.
       // Harvest: internal question runtime exports -2.
-      // +4: focused base64 media helpers.
-      8162,
+      8157,
       env,
     ),
     publicFunctionExports: readPluginSdkSurfaceBudgetEnv(
@@ -313,8 +309,7 @@ export function readPluginSdkSurfaceBudgets(env = process.env) {
       // +1: centralized remember-across-conversations effective-default resolver.
       // +3: gateway-backed harness question runner and claim/cancel helpers.
       // Harvest: internal question runtime callable -1.
-      // +3: focused base64 media helpers.
-      4543,
+      4539,
       env,
     ),
     publicDeprecatedExports: readPluginSdkSurfaceBudgetEnv(
