@@ -1895,6 +1895,30 @@
       ]
     },
     {
+      "locale": "fa",
+      "source": "Default (inherited)",
+      "translations": [
+        "پیش‌فرض (ارث‌بری‌شده)",
+        "پیش‌فرض (به‌ارث‌رسیده)"
+      ]
+    },
+    {
+      "locale": "pl",
+      "source": "Default (inherited)",
+      "translations": [
+        "Domyślne (dziedziczone)",
+        "Domyślne (odziedziczone)"
+      ]
+    },
+    {
+      "locale": "th",
+      "source": "Default (inherited)",
+      "translations": [
+        "ค่าเริ่มต้น (สืบทอด)",
+        "ค่าเริ่มต้น (สืบทอดมา)"
+      ]
+    },
+    {
       "locale": "ko",
       "source": "Default Agent",
       "translations": [
@@ -2868,6 +2892,22 @@
       ]
     },
     {
+      "locale": "ko",
+      "source": "Fast",
+      "translations": [
+        "빠르게",
+        "빠름"
+      ]
+    },
+    {
+      "locale": "pl",
+      "source": "Fast",
+      "translations": [
+        "Szybkie",
+        "Szybko"
+      ]
+    },
+    {
       "locale": "ar",
       "source": "Forget Gateway",
       "translations": [
@@ -3023,6 +3063,7 @@
       "source": "Full",
       "translations": [
         "Pełna",
+        "Pełne",
         "Pełny"
       ]
     },
@@ -3031,6 +3072,7 @@
       "source": "Full",
       "translations": [
         "Полная",
+        "Полное",
         "Полный"
       ]
     },
@@ -3047,6 +3089,7 @@
       "source": "Full",
       "translations": [
         "Повна",
+        "Повне",
         "Повний"
       ]
     },
@@ -4969,6 +5012,22 @@
       ]
     },
     {
+      "locale": "pt-BR",
+      "source": "New Session Options…",
+      "translations": [
+        "Opções da nova sessão…",
+        "Opções de Nova Sessão…"
+      ]
+    },
+    {
+      "locale": "zh-CN",
+      "source": "New Session Options…",
+      "translations": [
+        "新会话选项…",
+        "新建会话选项…"
+      ]
+    },
+    {
       "locale": "ar",
       "source": "No approvals waiting",
       "translations": [
@@ -5644,6 +5703,14 @@
       ]
     },
     {
+      "locale": "uk",
+      "source": "Off",
+      "translations": [
+        "Вимк.",
+        "Вимкнено"
+      ]
+    },
+    {
       "locale": "zh-TW",
       "source": "Off",
       "translations": [
@@ -5811,6 +5878,14 @@
       "translations": [
         "Ativado",
         "Ligado"
+      ]
+    },
+    {
+      "locale": "uk",
+      "source": "On",
+      "translations": [
+        "Увімк.",
+        "Увімкнено"
       ]
     },
     {
@@ -6406,6 +6481,14 @@
       ]
     },
     {
+      "locale": "ja-JP",
+      "source": "Pinned",
+      "translations": [
+        "ピン留め",
+        "ピン留め済み"
+      ]
+    },
+    {
       "locale": "pl",
       "source": "Pinned",
       "translations": [
@@ -6418,7 +6501,8 @@
       "source": "Pinned",
       "translations": [
         "Fixada",
-        "Fixado"
+        "Fixado",
+        "Fixados"
       ]
     },
     {
@@ -6761,6 +6845,7 @@
       "locale": "hi",
       "source": "Recent",
       "translations": [
+        "हाल के",
         "हाल ही के",
         "हालिया"
       ]
@@ -6771,6 +6856,22 @@
       "translations": [
         "Son",
         "Son Kullanılanlar"
+      ]
+    },
+    {
+      "locale": "uk",
+      "source": "Recent",
+      "translations": [
+        "Нещодавні",
+        "Останні"
+      ]
+    },
+    {
+      "locale": "zh-TW",
+      "source": "Recent",
+      "translations": [
+        "最近",
+        "最近使用"
       ]
     },
     {
@@ -8769,6 +8870,7 @@
       "locale": "de",
       "source": "Thinking",
       "translations": [
+        "Denkmodus",
         "Denkprozess",
         "Denkt nach",
         "Nachdenken"
@@ -8795,7 +8897,8 @@
       "source": "Thinking",
       "translations": [
         "विचार प्रक्रिया",
-        "सोच रहा है"
+        "सोच रहा है",
+        "सोच-विचार"
       ]
     },
     {
@@ -8837,6 +8940,7 @@
       "translations": [
         "Aan het nadenken",
         "Denken",
+        "Denkmodus",
         "Redeneren"
       ]
     },
@@ -9345,6 +9449,30 @@
       "translations": [
         "Dùng Thiết lập thủ công",
         "Sử dụng thiết lập thủ công"
+      ]
+    },
+    {
+      "locale": "fr",
+      "source": "Verbosity",
+      "translations": [
+        "Niveau de détail",
+        "Verbosité"
+      ]
+    },
+    {
+      "locale": "pt-BR",
+      "source": "Verbosity",
+      "translations": [
+        "Nível de detalhe",
+        "Nível de detalhes"
+      ]
+    },
+    {
+      "locale": "tr",
+      "source": "Verbosity",
+      "translations": [
+        "Ayrıntı Düzeyi",
+        "Ayrıntı düzeyi"
       ]
     },
     {

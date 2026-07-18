@@ -10529,6 +10529,61 @@
       "translated": "任務詳細資料"
     },
     {
+      "id": "native.apple.29cacb53ea5e77fc",
+      "source": "Pinned",
+      "translated": "已釘選"
+    },
+    {
+      "id": "native.apple.940062cfdce9211b",
+      "source": "Recent",
+      "translated": "最近使用"
+    },
+    {
+      "id": "native.apple.a0980128426308a9",
+      "source": "Model",
+      "translated": "模型"
+    },
+    {
+      "id": "native.apple.9520e60f21535dde",
+      "source": "Thinking",
+      "translated": "思考"
+    },
+    {
+      "id": "native.apple.8b321f3ffce97429",
+      "source": "Fast",
+      "translated": "快速"
+    },
+    {
+      "id": "native.apple.989b70d64e328d55",
+      "source": "Default (inherited)",
+      "translated": "預設（繼承）"
+    },
+    {
+      "id": "native.apple.f4114e73b07eb9ae",
+      "source": "Off",
+      "translated": "關閉"
+    },
+    {
+      "id": "native.apple.7ed231b28d16312f",
+      "source": "On",
+      "translated": "開啟"
+    },
+    {
+      "id": "native.apple.412a74802320a037",
+      "source": "Full",
+      "translated": "完整"
+    },
+    {
+      "id": "native.apple.299f21a2071ff9fc",
+      "source": "Verbosity",
+      "translated": "詳細程度"
+    },
+    {
+      "id": "native.apple.faf0ef05e1496de7",
+      "source": "Default",
+      "translated": "預設"
+    },
+    {
       "id": "native.apple.e5524d5756a62744",
       "source": "Unable to Export Transcript",
       "translated": "無法匯出逐字稿"
@@ -10592,6 +10647,11 @@
       "id": "native.apple.1876037e64a74110",
       "source": "New Chat in Worktree",
       "translated": "在 Worktree 中新增聊天"
+    },
+    {
+      "id": "native.apple.ce6ebe91fc597015",
+      "source": "New Session Options…",
+      "translated": "新增工作階段選項…"
     },
     {
       "id": "native.apple.a1b0d289758e2213",

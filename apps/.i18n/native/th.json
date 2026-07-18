@@ -10529,6 +10529,61 @@
       "translated": "รายละเอียดงาน"
     },
     {
+      "id": "native.apple.29cacb53ea5e77fc",
+      "source": "Pinned",
+      "translated": "ปักหมุดแล้ว"
+    },
+    {
+      "id": "native.apple.940062cfdce9211b",
+      "source": "Recent",
+      "translated": "ล่าสุด"
+    },
+    {
+      "id": "native.apple.a0980128426308a9",
+      "source": "Model",
+      "translated": "โมเดล"
+    },
+    {
+      "id": "native.apple.9520e60f21535dde",
+      "source": "Thinking",
+      "translated": "การคิด"
+    },
+    {
+      "id": "native.apple.8b321f3ffce97429",
+      "source": "Fast",
+      "translated": "เร็ว"
+    },
+    {
+      "id": "native.apple.989b70d64e328d55",
+      "source": "Default (inherited)",
+      "translated": "ค่าเริ่มต้น (สืบทอดมา)"
+    },
+    {
+      "id": "native.apple.f4114e73b07eb9ae",
+      "source": "Off",
+      "translated": "ปิด"
+    },
+    {
+      "id": "native.apple.7ed231b28d16312f",
+      "source": "On",
+      "translated": "เปิด"
+    },
+    {
+      "id": "native.apple.412a74802320a037",
+      "source": "Full",
+      "translated": "เต็มรูปแบบ"
+    },
+    {
+      "id": "native.apple.299f21a2071ff9fc",
+      "source": "Verbosity",
+      "translated": "ระดับรายละเอียด"
+    },
+    {
+      "id": "native.apple.faf0ef05e1496de7",
+      "source": "Default",
+      "translated": "ค่าเริ่มต้น"
+    },
+    {
       "id": "native.apple.e5524d5756a62744",
       "source": "Unable to Export Transcript",
       "translated": "ไม่สามารถส่งออกบันทึกการสนทนาได้"
@@ -10592,6 +10647,11 @@
       "id": "native.apple.1876037e64a74110",
       "source": "New Chat in Worktree",
       "translated": "แชทใหม่ใน Worktree"
+    },
+    {
+      "id": "native.apple.ce6ebe91fc597015",
+      "source": "New Session Options…",
+      "translated": "ตัวเลือกเซสชันใหม่…"
     },
     {
       "id": "native.apple.a1b0d289758e2213",
