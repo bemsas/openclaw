@@ -12,6 +12,8 @@ describe("WhatsApp allowlist formatting", () => {
       "15551230001@s.whatsapp.net",
       "15551230001:4@c.us",
       "15551230002:7@hosted",
+      "15551230006_128:1@s.whatsapp.net",
+      "15551230007_128:2@hosted",
       "*",
       15551230003,
       " ",
@@ -21,7 +23,15 @@ describe("WhatsApp allowlist formatting", () => {
       "telegram:+15551230006",
     ];
     const params = { cfg: {} as OpenClawConfig, allowFrom };
-    const expected = ["15551234567", "15551230001", "15551230002", "*", "15551230003"];
+    const expected = [
+      "15551234567",
+      "15551230001",
+      "15551230002",
+      "15551230006",
+      "15551230007",
+      "*",
+      "15551230003",
+    ];
 
     expect(whatsappSetupPlugin.config.formatAllowFrom?.(params)).toEqual(expected);
     expect(whatsappPlugin.config.formatAllowFrom?.(params)).toEqual(expected);

@@ -1,6 +1,8 @@
 // Whatsapp plugin module owns dependency-free JID syntax checks.
 
-const DIRECT_LOCAL_PART_RE = /^(\d+)(?::\d+)?$/;
+// Baileys encodes direct JIDs as user[_agent][:device]@server. Validate every
+// numeric component before its normalizer strips agent and device metadata.
+const DIRECT_LOCAL_PART_RE = /^(\d+)(?:_\d+)?(?::\d+)?$/;
 const GROUP_LOCAL_PART_RE = /^[0-9]+(?:-[0-9]+)*$/;
 const NUMERIC_LOCAL_PART_RE = /^\d+$/;
 
