@@ -631,6 +631,10 @@ describe("createWebSendApi LID resolution (issue #67378)", () => {
     vi.clearAllMocks();
     authDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-wa-lid-"));
     fs.writeFileSync(path.join(authDir, "lid-mapping-15555550000.json"), JSON.stringify("987654"));
+    fs.writeFileSync(
+      path.join(authDir, "lid-mapping-987654_reverse.json"),
+      JSON.stringify("15555550000"),
+    );
   });
 
   afterEach(() => {
@@ -661,6 +665,45 @@ describe("createWebSendApi LID resolution (issue #67378)", () => {
     await api.sendMessage("+33123456789", "hello");
     expect(requireMockArg(sendMessage, 0, 0, "unmapped send")).toBe("33123456789@s.whatsapp.net");
     expect(requireMockArg(sendMessage, 0, 1, "unmapped send")).toEqual({ text: "hello" });
+  });
+
+  it.each([
+    {
+      target: "987654@lid",
+      mappedPn: "15555550000@s.whatsapp.net",
+    },
+    {
+      target: "987654@hosted.lid",
+      mappedPn: "15555550000@hosted",
+    },
+  ])(
+    "prepares the verified PN alias for an explicit $target send",
+    async ({ target, mappedPn }) => {
+      const api = createWebSendApi({
+        sock: { sendMessage, sendPresenceUpdate },
+        defaultAccountId: "main",
+        authDir,
+      });
+      await api.sendMessage(target, "hello");
+      expect(requireMockArg(sendMessage, 0, 0, "mapped send")).toBe(target);
+      expect(requireMockArg(sendMessage, 0, 3, "mapped send identity")).toEqual({
+        remoteE164: "+15555550000",
+        remoteJids: [target, mappedPn],
+      });
+    },
+  );
+
+  it("keeps an unmapped same-digit LID distinct from its apparent PN", async () => {
+    const api = createWebSendApi({
+      sock: { sendMessage, sendPresenceUpdate },
+      defaultAccountId: "main",
+      authDir,
+    });
+    await api.sendMessage("15555550000@lid", "hello");
+    expect(requireMockArg(sendMessage, 0, 3, "unmapped send identity")).toEqual({
+      remoteE164: undefined,
+      remoteJids: ["15555550000@lid"],
+    });
   });
 
   it("resolves PN to LID for sendPoll", async () => {

@@ -8,10 +8,11 @@ import type {
 import { recordChannelActivity } from "openclaw/plugin-sdk/channel-activity-runtime";
 import { resolveWhatsAppDocumentFileName } from "../document-filename.js";
 import { addWhatsAppImagePreviewFields } from "../image-preview.js";
+import { readWhatsAppLidToPnMappings } from "../lid-mapping-files.js";
 import { isWhatsAppNewsletterJid } from "../normalize.js";
 import { buildQuotedMessageOptions } from "../quoted-message.js";
 import { toWhatsappJid, toWhatsappJidWithLid } from "../text-runtime.js";
-import { classifyWhatsAppJid } from "../whatsapp-jid.js";
+import { classifyWhatsAppJid, encodeWhatsAppJid } from "../whatsapp-jid.js";
 import {
   addWhatsAppOutboundMentionsToContent,
   type WhatsAppOutboundMentionResolution,
@@ -62,6 +63,37 @@ function supportsForcedDocumentMediaType(mediaType: string): boolean {
   return mediaType.startsWith("image/") || mediaType.startsWith("video/");
 }
 
+function prepareOutboundIdentity(params: {
+  requestedJid: string;
+  routedJid: string;
+  authDir?: string;
+}): WhatsAppPreparedOutboundIdentity {
+  const requested = classifyWhatsAppJid(params.requestedJid);
+  if (requested.kind !== "pn" && requested.kind !== "lid") {
+    return {};
+  }
+
+  let remoteE164 = requested.kind === "pn" ? `+${requested.user}` : undefined;
+  const remoteJids = new Set([params.requestedJid, params.routedJid]);
+  if (requested.kind === "lid" && params.authDir) {
+    const mappings = readWhatsAppLidToPnMappings({
+      lid: requested.user,
+      mappingDirs: [params.authDir],
+    });
+    const mappedE164 = mappings.length === 1 ? mappings[0] : undefined;
+    if (mappedE164) {
+      remoteE164 = mappedE164;
+      remoteJids.add(
+        encodeWhatsAppJid(
+          mappedE164.slice(1),
+          requested.server === "hosted.lid" ? "hosted" : "s.whatsapp.net",
+        ),
+      );
+    }
+  }
+  return { remoteE164, remoteJids: [...remoteJids] };
+}
+
 export function createWebSendApi(params: {
   sock: {
     sendMessage: (
@@ -85,19 +117,16 @@ export function createWebSendApi(params: {
 }) {
   const resolveOutboundRoute = (recipient: string): WhatsAppOutboundRoute => {
     const requestedJid = toWhatsappJid(recipient);
-    const requestedIdentity = classifyWhatsAppJid(requestedJid);
     const jid = params.authDir
       ? toWhatsappJidWithLid(recipient, { authDir: params.authDir })
       : requestedJid;
     return {
       jid,
-      identity: {
-        remoteE164: requestedIdentity.kind === "pn" ? `+${requestedIdentity.user}` : undefined,
-        remoteJids:
-          requestedIdentity.kind === "pn" || requestedIdentity.kind === "lid"
-            ? [...new Set([requestedJid, jid])]
-            : undefined,
-      },
+      identity: prepareOutboundIdentity({
+        requestedJid,
+        routedJid: jid,
+        authDir: params.authDir,
+      }),
     };
   };
   const resolveMentions = async (
