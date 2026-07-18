@@ -496,7 +496,7 @@ public struct StateVersion: Codable, Sendable {
 
 public struct Snapshot: Codable, Sendable {
     public let presence: [PresenceEntry]
-    public let health: AnyCodable
+    public let health: [String: AnyCodable]
     public let stateversion: StateVersion
     public let uptimems: Int
     public let appliedconfighash: AnyCodable?
@@ -508,7 +508,7 @@ public struct Snapshot: Codable, Sendable {
 
     public init(
         presence: [PresenceEntry],
-        health: AnyCodable,
+        health: [String: AnyCodable],
         stateversion: StateVersion,
         uptimems: Int,
         appliedconfighash: AnyCodable? = nil,

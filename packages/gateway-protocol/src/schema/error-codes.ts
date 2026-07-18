@@ -24,7 +24,7 @@ export const ErrorCodes = {
 } as const;
 
 /** Closed set of canonical gateway error code strings. */
-export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
+type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
 
 /** Stable discriminants for structured method-level authorization failures. */
 export const GatewayErrorDetailCodes = {
