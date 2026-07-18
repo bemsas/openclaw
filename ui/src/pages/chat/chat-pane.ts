@@ -2865,10 +2865,7 @@ class ChatPane extends OpenClawLightDomElement {
       error: state.lastError,
       inlineApproval,
       approvalBusy: approvalSnapshot.approvalBusy,
-      approvalError:
-        inlineApproval && approvalSnapshot.approvalErrorId === inlineApproval.id
-          ? approvalSnapshot.approvalError
-          : null,
+      approvalErrors: approvalSnapshot.approvalErrors,
       approvalNowMs: approvalSnapshot.approvalNowMs,
       onApprovalDecision: (approvalId, decision) =>
         this.context.overlays.decideApproval(decision, approvalId),
