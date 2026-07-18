@@ -274,7 +274,8 @@ export function readPluginSdkSurfaceBudgets(env = process.env) {
       // +3: bounded raw transcript cursor request, result, and reader.
       // +3: bounded visible transcript cursor request, result, and reader.
       // +1: explicit AgentModelPolicyConfig shared with provider setup surfaces.
-      8165,
+      // +2: indexed transcript write-lock context and runner.
+      8167,
       env,
     ),
     publicFunctionExports: readPluginSdkSurfaceBudgetEnv(
@@ -317,7 +318,8 @@ export function readPluginSdkSurfaceBudgets(env = process.env) {
       // +1: ingress-effect-once factory.
       // +1: bounded raw transcript cursor reader.
       // +1: bounded visible transcript cursor reader.
-      4542,
+      // +1: indexed transcript write-lock runner.
+      4543,
       env,
     ),
     publicDeprecatedExports: readPluginSdkSurfaceBudgetEnv(
