@@ -66,7 +66,11 @@ vi.mock("../plugins/doctor-contract-registry.js", async (importOriginal) => {
   return {
     ...actual,
     listPluginDoctorLegacyConfigRules: () => [],
-    applyPluginDoctorCompatibilityMigrations: () => ({ next: null, changes: [] }),
+    applyPluginDoctorCompatibilityMigrations: (config: OpenClawConfig) => ({
+      config,
+      changes: [],
+      warnings: [],
+    }),
   };
 });
 
