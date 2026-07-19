@@ -52,7 +52,7 @@ function directPnE164(jid: string | null | undefined): string | undefined {
   return classified.kind === "pn" ? `+${classified.user}` : undefined;
 }
 
-export function canonicalizeWhatsAppDirectJids(
+function canonicalizeWhatsAppDirectJids(
   values: readonly (string | null | undefined)[] | null | undefined,
 ): string[] | undefined {
   const canonical = new Set<string>();
