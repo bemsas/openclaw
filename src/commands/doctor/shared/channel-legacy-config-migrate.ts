@@ -1,6 +1,7 @@
 // Legacy config migration bridge for channel doctor compatibility contracts.
 import { getBootstrapChannelPlugin } from "../../../channels/plugins/bootstrap-registry.js";
 import { loadBundledChannelDoctorContractApi } from "../../../channels/plugins/doctor-contract-api.js";
+import type { ChannelDoctorConfigMutation } from "../../../channels/plugins/types.adapters.js";
 import type { OpenClawConfig } from "../../../config/types.js";
 import {
   applyPluginDoctorCompatibilityMigrations,
@@ -8,15 +9,9 @@ import {
 } from "../../../plugins/doctor-contract-registry.js";
 import { isRecord } from "./legacy-config-record-shared.js";
 
-type ChannelDoctorCompatibilityMutation = {
-  config: OpenClawConfig;
-  changes: string[];
-  warnings?: string[];
-};
-
 type ChannelDoctorCompatibilityNormalizer = (params: {
   cfg: OpenClawConfig;
-}) => ChannelDoctorCompatibilityMutation;
+}) => ChannelDoctorConfigMutation;
 
 function collectRelevantDoctorChannelIds(raw: unknown): string[] {
   const channels = isRecord(raw) && isRecord(raw.channels) ? raw.channels : null;

@@ -29,13 +29,14 @@ import { getWhatsAppConnectionController } from "../connection-controller-runtim
 import {
   getPrimaryIdentityId,
   identitiesOverlap,
+  prepareWhatsAppDirectInboundActor,
   prepareWhatsAppInboundActor,
   resolveComparableIdentity,
   type PreparedWhatsAppInboundActor,
 } from "../identity.js";
 import { addWhatsAppImagePreviewFields } from "../image-preview.js";
 import { maybeResolveWhatsAppQuestionReaction } from "../question-reactions.js";
-import { cacheInboundMessageMeta, canonicalizeWhatsAppDirectJids } from "../quoted-message.js";
+import { cacheInboundMessageMeta } from "../quoted-message.js";
 import { DEFAULT_RECONNECT_POLICY, computeBackoff, sleepWithAbort } from "../reconnect.js";
 import type { OpenClawConfig } from "../runtime-api.js";
 import { createWaSocket, formatError, getStatusCode, waitForWaConnection } from "../session.js";
@@ -984,6 +985,7 @@ export async function attachWebInboxToSocket(
     participantJid?: string;
     from: string;
     senderE164: string | null;
+    directComparableJids?: string[];
     groupSubject?: string;
     groupParticipants?: string[];
     messageTimestampMs?: number;
@@ -1049,10 +1051,20 @@ export async function attachWebInboxToSocket(
       return null;
     }
 
-    const actor = prepareWhatsAppInboundActor({
-      primaryJid: group ? msg.key?.participant : remoteJid,
-      alternateJid: group ? msg.key?.participantAlt : msg.key?.remoteJidAlt,
-    });
+    const directActor = group
+      ? null
+      : prepareWhatsAppDirectInboundActor({
+          remoteJid,
+          remoteJidAlt: msg.key?.remoteJidAlt,
+          fromMe: Boolean(msg.key?.fromMe),
+          self,
+        });
+    const actor = group
+      ? prepareWhatsAppInboundActor({
+          primaryJid: msg.key?.participant,
+          alternateJid: msg.key?.participantAlt,
+        })
+      : directActor;
     const participantJid = group
       ? (actor?.transportJid ?? msg.key?.participant ?? undefined)
       : undefined;
@@ -1103,6 +1115,7 @@ export async function attachWebInboxToSocket(
       participantJid,
       from,
       senderE164,
+      directComparableJids: directActor?.comparableJids,
       groupSubject,
       groupParticipants,
       messageTimestampMs,
@@ -1433,10 +1446,6 @@ export async function attachWebInboxToSocket(
       const admission = requireWhatsAppInboundAdmission(inboundMessage);
       // Cache only identity facts already established by ingress and Baileys.
       // Quote lookup compares E.164 too; alias discovery here would delay delivery.
-      const remoteJids =
-        admission.conversation.kind === "direct"
-          ? canonicalizeWhatsAppDirectJids([inboundMessage.platform.chatJid, msg.key.remoteJidAlt])
-          : undefined;
       cacheInboundMessageMeta(
         admission.accountId,
         inboundMessage.platform.chatJid,
@@ -1447,7 +1456,8 @@ export async function attachWebInboxToSocket(
             admission.conversation.kind === "direct"
               ? inboundMessage.platform.senderE164
               : undefined,
-          remoteJids,
+          remoteJids:
+            admission.conversation.kind === "direct" ? inbound.directComparableJids : undefined,
           body: inboundMessage.payload.body,
           fromMe: inboundMessage.platform.fromMe,
         },

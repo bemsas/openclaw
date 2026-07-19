@@ -110,6 +110,66 @@ export function prepareWhatsAppInboundActor(params: {
   };
 }
 
+function canonicalizeObservedDirectJids(jids: ReadonlyArray<string | null | undefined>): string[] {
+  return [
+    ...new Set(
+      jids
+        .map((jid) => classifyWhatsAppDirectJid(jid)?.jid)
+        .filter((jid): jid is string => Boolean(jid)),
+    ),
+  ];
+}
+
+function isObservedSelfDirectJid(
+  directJid: NonNullable<ReturnType<typeof classifyWhatsAppDirectJid>>,
+  self: WhatsAppSelfIdentity,
+): boolean {
+  if (canonicalizeObservedDirectJids([self.jid, self.lid]).includes(directJid.jid)) {
+    return true;
+  }
+  return (
+    directJid.kind === "pn" &&
+    self.e164 != null &&
+    normalizeE164(self.e164) === `+${directJid.user}`
+  );
+}
+
+export function prepareWhatsAppDirectInboundActor(params: {
+  remoteJid: string | null | undefined;
+  remoteJidAlt?: string | null;
+  fromMe: boolean;
+  self: WhatsAppSelfIdentity;
+}): (PreparedWhatsAppInboundActor & { comparableJids: string[] }) | null {
+  // For incoming DMs Baileys reports two forms of the sender. For outgoing DMs,
+  // remoteJid is the recipient while remoteJidAlt is the sender; pairing those
+  // identities can make an outbound peer look like the linked account.
+  const actor = prepareWhatsAppInboundActor({
+    primaryJid: params.remoteJid,
+    alternateJid: params.fromMe ? null : params.remoteJidAlt,
+  });
+  if (!actor) {
+    return null;
+  }
+  if (!params.fromMe) {
+    return {
+      ...actor,
+      comparableJids: canonicalizeObservedDirectJids([params.remoteJid, params.remoteJidAlt]),
+    };
+  }
+
+  const primary = classifyWhatsAppDirectJid(params.remoteJid);
+  const isSelfChat = primary ? isObservedSelfDirectJid(primary, params.self) : false;
+  const selfE164 = params.self.e164 != null ? normalizeE164(params.self.e164) : null;
+  return {
+    ...actor,
+    e164: actor.e164 ?? (isSelfChat ? selfE164 : null),
+    comparableJids: canonicalizeObservedDirectJids([
+      params.remoteJid,
+      ...(isSelfChat ? [params.self.jid, params.self.lid] : []),
+    ]),
+  };
+}
+
 export function getComparableIdentityValues(
   identity: WhatsAppIdentity | WhatsAppSelfIdentity | null | undefined,
 ): string[] {

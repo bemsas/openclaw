@@ -2020,6 +2020,7 @@ describe("web monitor inbox", () => {
         id: messageId,
         remoteJid: testCase.remoteJid,
         remoteJidAlt: testCase.remoteJidAlt,
+        fromMe: false,
         text: "ping",
         timestamp: 1_700_000_000,
         pushName: "Tester",
@@ -2035,6 +2036,72 @@ describe("web monitor inbox", () => {
     expect(
       lookupInboundMessageMetaForTarget(DEFAULT_ACCOUNT_ID, testCase.targetJid, messageId),
     ).toMatchObject({ remoteJid: testCase.cachedRemoteJid, body: "ping" });
+
+    await listener.close();
+  });
+
+  it("keeps a direct fromMe peer recipient separate from the sender alternate", async () => {
+    getSock().user = {
+      id: "123@s.whatsapp.net",
+      lid: "800000000000000@lid",
+    };
+    const onMessage = vi.fn(async () => {});
+    const { listener, sock } = await startInboxMonitor(onMessage as InboxOnMessage);
+    const getPNForLID = vi.spyOn(sock.signalRepository.lidMapping, "getPNForLID");
+
+    sock.ev.emit(
+      "messages.upsert",
+      buildNotifyMessageUpsert({
+        id: nextMessageId("from-me-peer-lid"),
+        remoteJid: "812345678901234@lid",
+        remoteJidAlt: "123@s.whatsapp.net",
+        fromMe: true,
+        text: "sent from the linked phone to a peer",
+        timestamp: 1_700_000_000,
+      }),
+    );
+    await settleInboundWork();
+
+    expect(getPNForLID).toHaveBeenCalledWith("812345678901234@lid");
+    expect(onMessage).not.toHaveBeenCalled();
+
+    await listener.close();
+  });
+
+  it("preserves a direct fromMe self-chat identified by its recipient LID", async () => {
+    getSock().user = {
+      id: "123@s.whatsapp.net",
+      lid: "800000000000000@lid",
+    };
+    const onMessage = vi.fn(async () => {});
+    const { listener, sock } = await startInboxMonitor(onMessage as InboxOnMessage);
+    const getPNForLID = vi.spyOn(sock.signalRepository.lidMapping, "getPNForLID");
+    const messageId = nextMessageId("from-me-self-chat-lid");
+
+    sock.ev.emit(
+      "messages.upsert",
+      buildNotifyMessageUpsert({
+        id: messageId,
+        remoteJid: "800000000000000:2@lid",
+        remoteJidAlt: "123:3@s.whatsapp.net",
+        fromMe: true,
+        text: "self-chat note",
+        timestamp: 1_700_000_000,
+      }),
+    );
+    await waitForMessageCalls(onMessage, 1);
+
+    expect(getPNForLID).not.toHaveBeenCalled();
+    expect(inboundMessage(onMessage)).toMatchObject({
+      admission: { conversation: { id: "+123", kind: "direct" } },
+      platform: { chatJid: "800000000000000:2@lid", fromMe: true },
+    });
+    expect(
+      lookupInboundMessageMetaForTarget(DEFAULT_ACCOUNT_ID, "123@s.whatsapp.net", messageId),
+    ).toMatchObject({
+      remoteJid: "800000000000000@lid",
+      fromMe: true,
+    });
 
     await listener.close();
   });

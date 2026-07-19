@@ -49,7 +49,7 @@ type MockSock = {
       getPNForLID: AnyMockFn;
     };
   };
-  user: { id: string };
+  user: { id: string; lid?: string };
 };
 
 const sessionState = vi.hoisted(() => ({
@@ -348,6 +348,7 @@ export function buildNotifyMessageUpsert(params: {
   participant?: string;
   participantAlt?: string;
   remoteJidAlt?: string;
+  fromMe?: boolean;
 }) {
   return {
     type: "notify",
@@ -355,7 +356,7 @@ export function buildNotifyMessageUpsert(params: {
       {
         key: {
           id: params.id,
-          fromMe: false,
+          fromMe: params.fromMe ?? false,
           remoteJid: params.remoteJid,
           remoteJidAlt: params.remoteJidAlt,
           participant: params.participant,
